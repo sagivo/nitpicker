@@ -1,0 +1,463 @@
+openapi: 3.1.0
+info:
+  title: PR Reviewer Bot API
+  description: |
+    AI-powered GitHub pull request reviewer built with [Probot](https://probot.github.io/) and [Vercel AI SDK](https://ai-sdk.dev).
+
+    This API is a GitHub App webhook receiver. It does not expose a traditional REST API — instead, GitHub
+    delivers webhook events to the single `/api/github/webhooks` endpoint, and the bot responds by calling
+    the GitHub API to post reviews, comments, and reactions.
+
+    ## Supported interactions
+
+    | Trigger | GitHub Event | Action |
+    |---------|--------------|--------|
+    | PR opened / updated / reopened | `pull_request` | Auto-reviews the PR with inline comments |
+    | `/ai-review` comment on a PR | `issue_comment` | Triggers an on-demand full review |
+    | `@pr-reviewer-bot <question>` on a PR | `issue_comment` | Answers the question using PR context |
+    | `@pr-reviewer-bot <question>` in a review thread | `pull_request_review_comment` | Replies in the thread with context-aware answers |
+
+    ## Authentication
+
+    Webhook payloads are verified using HMAC-SHA256 via the `X-Hub-Signature-256` header and the
+    configured `WEBHOOK_SECRET`. Invalid signatures are rejected before any handler runs.
+  version: 1.0.0
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Local development server
+  - url: https://your-production-url.example.com
+    description: Production server
+
+paths:
+  /ping:
+    get:
+      operationId: ping
+      summary: Health check
+      description: Returns `PONG` to confirm the server is running. No authentication required.
+      responses:
+        "200":
+          description: Server is healthy.
+          content:
+            text/plain:
+              schema:
+                type: string
+                const: PONG
+
+  /api/github/webhooks:
+    post:
+      operationId: handleWebhook
+      summary: GitHub webhook receiver
+      description: |
+        Receives GitHub webhook events and dispatches them to the appropriate handler.
+
+        The bot processes the following event + action combinations:
+
+        - **`pull_request`** with actions `opened`, `synchronize`, or `reopened` — triggers an automatic AI code review.
+        - **`issue_comment`** with action `created` — if the comment body is `/ai-review`, triggers an on-demand review.
+          If the comment mentions `@<bot-name>`, answers the question using PR context.
+        - **`pull_request_review_comment`** with action `created` — if the comment mentions `@<bot-name>`,
+          replies in the review thread with a context-aware answer.
+
+        All other events are acknowledged with `200` but ignored.
+      parameters:
+        - name: X-GitHub-Event
+          in: header
+          required: true
+          description: |
+            The type of GitHub event. The bot handles `pull_request`, `issue_comment`,
+            and `pull_request_review_comment`.
+          schema:
+            type: string
+            examples:
+              - pull_request
+              - issue_comment
+              - pull_request_review_comment
+        - name: X-GitHub-Delivery
+          in: header
+          required: true
+          description: A unique UUID identifying this webhook delivery.
+          schema:
+            type: string
+            format: uuid
+        - name: X-Hub-Signature-256
+          in: header
+          required: true
+          description: |
+            HMAC-SHA256 hex digest of the request body, prefixed with `sha256=`.
+            Computed using the `WEBHOOK_SECRET` shared between GitHub and the app.
+          schema:
+            type: string
+            pattern: "^sha256=[a-f0-9]{64}$"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              discriminator:
+                propertyName: action
+              oneOf:
+                - $ref: "#/components/schemas/PullRequestEvent"
+                - $ref: "#/components/schemas/IssueCommentEvent"
+                - $ref: "#/components/schemas/PullRequestReviewCommentEvent"
+      responses:
+        "200":
+          description: Event received and processed (or ignored if not a handled event type).
+        "400":
+          description: Invalid payload or missing required headers.
+        "401":
+          description: Webhook signature verification failed.
+        "500":
+          description: Internal server error during event processing.
+
+components:
+  schemas:
+    # ─── Webhook Event Payloads ─────────────────────────────────────────
+
+    PullRequestEvent:
+      type: object
+      description: |
+        Delivered when a pull request is opened, updated (synchronize), or reopened.
+        The bot automatically reviews the PR diff and posts inline comments.
+      required:
+        - action
+        - pull_request
+        - repository
+        - sender
+        - installation
+      properties:
+        action:
+          type: string
+          enum:
+            - opened
+            - synchronize
+            - reopened
+        pull_request:
+          $ref: "#/components/schemas/PullRequest"
+        repository:
+          $ref: "#/components/schemas/Repository"
+        sender:
+          $ref: "#/components/schemas/User"
+        installation:
+          $ref: "#/components/schemas/Installation"
+
+    IssueCommentEvent:
+      type: object
+      description: |
+        Delivered when a comment is created on a pull request issue.
+
+        The bot responds to two patterns:
+        - `/ai-review` — triggers a full on-demand code review.
+        - `@<bot-name> <question>` — answers the question using PR context.
+      required:
+        - action
+        - comment
+        - issue
+        - repository
+        - sender
+        - installation
+      properties:
+        action:
+          type: string
+          enum:
+            - created
+        comment:
+          $ref: "#/components/schemas/IssueComment"
+        issue:
+          $ref: "#/components/schemas/Issue"
+        repository:
+          $ref: "#/components/schemas/Repository"
+        sender:
+          $ref: "#/components/schemas/User"
+        installation:
+          $ref: "#/components/schemas/Installation"
+
+    PullRequestReviewCommentEvent:
+      type: object
+      description: |
+        Delivered when a comment is created in a pull request review thread.
+        The bot responds when mentioned with `@<bot-name>` and replies in the same thread.
+      required:
+        - action
+        - comment
+        - pull_request
+        - repository
+        - sender
+        - installation
+      properties:
+        action:
+          type: string
+          enum:
+            - created
+        comment:
+          $ref: "#/components/schemas/ReviewComment"
+        pull_request:
+          $ref: "#/components/schemas/PullRequestMinimal"
+        repository:
+          $ref: "#/components/schemas/Repository"
+        sender:
+          $ref: "#/components/schemas/User"
+        installation:
+          $ref: "#/components/schemas/Installation"
+
+    # ─── Shared Sub-Schemas ─────────────────────────────────────────────
+
+    PullRequest:
+      type: object
+      description: Full pull request object as delivered by the GitHub `pull_request` webhook.
+      required:
+        - number
+        - title
+        - body
+        - state
+        - html_url
+        - head
+        - base
+        - user
+      properties:
+        number:
+          type: integer
+          description: PR number within the repository.
+          examples:
+            - 42
+        title:
+          type: string
+          description: Title of the pull request.
+          examples:
+            - "Add caching layer for API responses"
+        body:
+          type: string
+          nullable: true
+          description: PR description body (may be null).
+        state:
+          type: string
+          enum:
+            - open
+            - closed
+        html_url:
+          type: string
+          format: uri
+          description: Web URL for the pull request.
+        head:
+          $ref: "#/components/schemas/GitRef"
+        base:
+          $ref: "#/components/schemas/GitRef"
+        user:
+          $ref: "#/components/schemas/User"
+
+    PullRequestMinimal:
+      type: object
+      description: Minimal pull request object included in review comment events.
+      required:
+        - number
+        - title
+      properties:
+        number:
+          type: integer
+          description: PR number within the repository.
+        title:
+          type: string
+          description: Title of the pull request.
+
+    GitRef:
+      type: object
+      required:
+        - ref
+        - sha
+      properties:
+        ref:
+          type: string
+          description: Branch name.
+          examples:
+            - "feature/add-caching"
+        sha:
+          type: string
+          description: Commit SHA.
+          examples:
+            - "abc123def456"
+
+    Repository:
+      type: object
+      required:
+        - id
+        - name
+        - full_name
+        - owner
+      properties:
+        id:
+          type: integer
+          description: Unique repository ID.
+        name:
+          type: string
+          description: Repository name.
+          examples:
+            - "pr-reviewer"
+        full_name:
+          type: string
+          description: Full repository name (owner/repo).
+          examples:
+            - "octocat/pr-reviewer"
+        owner:
+          $ref: "#/components/schemas/User"
+
+    User:
+      type: object
+      required:
+        - id
+        - login
+      properties:
+        id:
+          type: integer
+          description: GitHub user ID.
+        login:
+          type: string
+          description: GitHub username.
+          examples:
+            - "octocat"
+
+    Installation:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: integer
+          description: GitHub App installation ID. Used by Probot to authenticate API calls.
+
+    Issue:
+      type: object
+      description: |
+        The issue (or pull request) the comment was posted on.
+        When `pull_request` is present, this issue is a PR.
+      required:
+        - number
+        - title
+      properties:
+        number:
+          type: integer
+          description: Issue/PR number.
+        title:
+          type: string
+          description: Issue/PR title.
+        pull_request:
+          type: object
+          nullable: true
+          description: Present when the issue is a pull request. The bot ignores comments on non-PR issues.
+          properties:
+            url:
+              type: string
+              format: uri
+
+    IssueComment:
+      type: object
+      description: A comment on an issue (or pull request).
+      required:
+        - id
+        - body
+        - user
+      properties:
+        id:
+          type: integer
+          description: Comment ID.
+        body:
+          type: string
+          description: |
+            The comment text. The bot checks for:
+            - Exact match `/ai-review` to trigger on-demand review.
+            - `@<bot-name> <question>` to answer a question.
+          examples:
+            - "/ai-review"
+            - "@pr-reviewer-bot What does this change do?"
+        user:
+          $ref: "#/components/schemas/User"
+
+    ReviewComment:
+      type: object
+      description: A comment in a pull request review thread.
+      required:
+        - id
+        - body
+        - path
+        - diff_hunk
+        - user
+      properties:
+        id:
+          type: integer
+          description: Review comment ID.
+        body:
+          type: string
+          description: |
+            The comment text. The bot responds when the body contains `@<bot-name>`.
+          examples:
+            - "@pr-reviewer-bot Can you suggest a better approach here?"
+        path:
+          type: string
+          description: File path the comment is attached to.
+          examples:
+            - "src/services/ai.ts"
+        diff_hunk:
+          type: string
+          description: The diff hunk context surrounding the commented line.
+        in_reply_to_id:
+          type: integer
+          nullable: true
+          description: |
+            ID of the root comment in the thread. Null if this is the root comment.
+            Used to fetch the full conversation thread.
+        user:
+          $ref: "#/components/schemas/User"
+
+    # ─── AI Response Schemas (internal, documented for reference) ───────
+
+    AIReviewResponse:
+      type: object
+      description: |
+        Shape of the structured AI review response parsed from the model output.
+        This is an internal schema — it is not sent to or received from the webhook endpoint,
+        but is documented here for completeness.
+      required:
+        - summary
+        - comments
+      properties:
+        summary:
+          type: string
+          description: High-level summary of the review findings.
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/AIReviewComment"
+
+    AIReviewComment:
+      type: object
+      description: A single AI-generated review comment with file location and severity.
+      required:
+        - file
+        - line
+        - severity
+        - body
+      properties:
+        file:
+          type: string
+          description: Path of the file the comment refers to.
+          examples:
+            - "src/handlers/pull-request.ts"
+        line:
+          type: integer
+          description: Line number in the new version of the file.
+          examples:
+            - 42
+        start_line:
+          type: integer
+          description: Start line for multi-line comments. Omitted for single-line comments.
+        severity:
+          type: string
+          enum:
+            - critical
+            - warning
+            - suggestion
+          description: Severity level of the finding.
+        body:
+          type: string
+          description: Markdown-formatted review comment body.
