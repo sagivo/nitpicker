@@ -12,10 +12,7 @@ Your goals:
 
 Do NOT produce JSON — respond in plain markdown.`;
 
-export function buildQuestionPrompt(
-  pr: PRDetails,
-  question: string,
-): string {
+export function buildQuestionPrompt(pr: PRDetails, question: string): string {
   return `## Pull Request Context
 **Title:** ${pr.title}
 **Description:** ${pr.body || "(no description)"}
