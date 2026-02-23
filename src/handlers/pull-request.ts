@@ -144,29 +144,52 @@ export async function handleOnDemandReview(
 
   if (review.comments.length === 0) {
     const body = review.summary || "Reviewed the changes — everything looks good. No issues found.";
-    const { data: comment } = await context.octokit.rest.issues.createComment({
+    const { data: postedReview } = await context.octokit.rest.pulls.createReview({
       owner,
       repo,
-      issue_number: pullNumber,
+      pull_number: pullNumber,
+      event: "COMMENT",
       body,
     });
-    context.log.info(`Posted on-demand review (no issues): ${comment.html_url}`);
+    context.log.info(`Posted on-demand review (no issues): ${postedReview.html_url}`);
     await removeEyesReaction(context, commentTarget, reactionId);
     return;
   }
 
-  const detailedComments = formatSummaryComment(review.comments);
-  const body = review.summary
-    ? `${buildSummary(review.comments, review.summary)}\n\n---\n\n${detailedComments}`
-    : detailedComments;
-  const { data: reviewComment } = await context.octokit.rest.issues.createComment({
+  const { inline, nonInline } = splitReviewComments(review.comments, pr.changedFiles);
+
+  if (inline.length === 0) {
+    const summary = formatSummaryComment(review.comments);
+    const body = review.summary
+      ? `${review.summary}\n\n---\n\n${summary}`
+      : summary;
+    const { data: fallbackReview } = await context.octokit.rest.pulls.createReview({
+      owner,
+      repo,
+      pull_number: pullNumber,
+      event: "COMMENT",
+      body,
+    });
+    context.log.info(`Posted on-demand review (summary only): ${fallbackReview.html_url}`);
+    await removeEyesReaction(context, commentTarget, reactionId);
+    return;
+  }
+
+  const summaryParts = [buildSummary(review.comments, review.summary)];
+  if (nonInline.length > 0) {
+    summaryParts.push(formatSummaryComment(nonInline));
+  }
+
+  const { data: inlineReview } = await context.octokit.rest.pulls.createReview({
     owner,
     repo,
-    issue_number: pullNumber,
-    body,
+    pull_number: pullNumber,
+    event: "COMMENT",
+    body: summaryParts.join("\n\n---\n\n"),
+    comments: inline,
   });
 
-  context.log.info(`Posted on-demand review with ${review.comments.length} finding(s): ${reviewComment.html_url}`);
+  context.log.info(`Posted on-demand review with ${inline.length} inline comment(s): ${inlineReview.html_url}`);
   await removeEyesReaction(context, commentTarget, reactionId);
 }
 

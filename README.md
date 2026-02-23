@@ -70,6 +70,7 @@ MAX_DIFF_SIZE=50000
 ```
 
 For the `PRIVATE_KEY`, you can either:
+
 - Paste the key contents with `\n` for newlines (as shown above)
 - Set `PRIVATE_KEY_PATH` to the path of the `.pem` file
 
@@ -125,21 +126,22 @@ smee -u https://smee.io/YOUR_CHANNEL --target http://localhost:3000/api/github/w
 
 ## Usage
 
-> **When is the bot triggered?**
-> The bot activates in two ways:
-> - **Automatically** — when a pull request is first opened or reopened
-> - **On-demand** — whenever someone mentions `@<bot-name>` (e.g. `@liblaber`) in a PR comment or review thread, or posts `/ai-review`
->
-> The bot name defaults to `pr-reviewer-bot`. Set `BOT_NAME` in your `.env` to match your GitHub App slug (e.g. `liblaber`).
+**When is the bot triggered?**
+The bot activates in two ways:
+
+- **Automatically** — when a pull request is first opened or reopened
+- **On-demand** — whenever someone mentions `@<bot-name>` (e.g. `@liblaber`) in a PR comment or review thread, or posts `/ai-review`
+
+The bot name defaults to `pr-reviewer-bot`. Set `BOT_NAME` in your `.env` to match your GitHub App slug (e.g. `liblaber`).
 
 Once the bot is running and installed on a repository, it responds to three types of triggers:
 
-| Trigger | How to activate | What happens |
-|---------|-----------------|--------------|
-| **Auto-review** | Open or reopen a PR | Bot automatically posts an inline code review with severity labels |
-| **On-demand review** | Comment `/ai-review` on any PR | Bot reviews the current PR state and posts findings as a comment |
-| **Ask a question** | Comment `@pr-reviewer-bot <your question>` on a PR | Bot answers using the PR diff and description as context |
-| **Thread reply** | Tag `@pr-reviewer-bot` in a review comment thread | Bot replies with context from the thread history and surrounding code |
+| Trigger              | How to activate                                    | What happens                                                          |
+| -------------------- | -------------------------------------------------- | --------------------------------------------------------------------- |
+| **Auto-review**      | Open or reopen a PR                                | Bot automatically posts an inline code review with severity labels    |
+| **On-demand review** | Comment `/ai-review` on any PR                     | Bot reviews the current PR state and posts findings as a comment      |
+| **Ask a question**   | Comment `@pr-reviewer-bot <your question>` on a PR | Bot answers using the PR diff and description as context              |
+| **Thread reply**     | Tag `@pr-reviewer-bot` in a review comment thread  | Bot replies with context from the thread history and surrounding code |
 
 ### Automatic reviews
 
@@ -191,16 +193,16 @@ See [AI SDK Providers](https://ai-sdk.dev/providers) for all supported providers
 
 ## Configuration
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `APP_ID` | -- | GitHub App ID |
-| `PRIVATE_KEY` | -- | GitHub App private key |
-| `WEBHOOK_SECRET` | -- | GitHub webhook secret |
-| `ANTHROPIC_API_KEY` | -- | Anthropic API key |
-| `AI_MODEL` | `claude-sonnet-4-20250514` | Model ID to use |
-| `BOT_NAME` | `pr-reviewer-bot` | Bot name for @mentions |
-| `MAX_DIFF_SIZE` | `50000` | Max diff characters sent to the AI |
-| `REVIEW_ON_OPEN` | `true` | Auto-review when a PR is opened or reopened |
+| Variable            | Default                    | Description                                 |
+| ------------------- | -------------------------- | ------------------------------------------- |
+| `APP_ID`            | --                         | GitHub App ID                               |
+| `PRIVATE_KEY`       | --                         | GitHub App private key                      |
+| `WEBHOOK_SECRET`    | --                         | GitHub webhook secret                       |
+| `ANTHROPIC_API_KEY` | --                         | Anthropic API key                           |
+| `AI_MODEL`          | `claude-sonnet-4-20250514` | Model ID to use                             |
+| `BOT_NAME`          | `pr-reviewer-bot`          | Bot name for @mentions                      |
+| `MAX_DIFF_SIZE`     | `50000`                    | Max diff characters sent to the AI          |
+| `REVIEW_ON_OPEN`    | `true`                     | Auto-review when a PR is opened or reopened |
 
 ## Project Structure
 
