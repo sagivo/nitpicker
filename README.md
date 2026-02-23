@@ -4,7 +4,7 @@ AI-powered GitHub pull request reviewer built with [Probot](https://probot.githu
 
 ## Features
 
-- **Auto-review** -- Automatically reviews every new or updated pull request
+- **Auto-review** -- Automatically reviews when a pull request is opened or reopened
 - **On-demand review** -- Comment `/ai-review` on any PR to trigger a review
 - **Question answering** -- Tag the bot (e.g. `@pr-reviewer-bot what does this change do?`) in a PR comment to ask questions
 - **Thread replies** -- Tag the bot in a review comment thread and it will reply with context-aware answers
@@ -121,13 +121,13 @@ pnpm dev
 smee -u https://smee.io/YOUR_CHANNEL --target http://localhost:3000/api/github/webhooks
 ```
 
-7. Open a PR on the repo where you installed the app -- the bot will automatically post a review.
+7. Open a PR on the repo where you installed the app — the bot will automatically post a review on initial open.
 
 ## Usage
 
 > **When is the bot triggered?**
 > The bot activates in two ways:
-> - **Automatically** — whenever a new pull request is opened or commits are pushed to an existing PR
+> - **Automatically** — when a pull request is first opened or reopened
 > - **On-demand** — whenever someone mentions `@<bot-name>` (e.g. `@liblaber`) in a PR comment or review thread, or posts `/ai-review`
 >
 > The bot name defaults to `pr-reviewer-bot`. Set `BOT_NAME` in your `.env` to match your GitHub App slug (e.g. `liblaber`).
@@ -136,14 +136,14 @@ Once the bot is running and installed on a repository, it responds to three type
 
 | Trigger | How to activate | What happens |
 |---------|-----------------|--------------|
-| **Auto-review** | Open a new PR, or push commits to an existing one | Bot automatically posts an inline code review with severity labels |
+| **Auto-review** | Open or reopen a PR | Bot automatically posts an inline code review with severity labels |
 | **On-demand review** | Comment `/ai-review` on any PR | Bot reviews the current PR state and posts findings as a comment |
 | **Ask a question** | Comment `@pr-reviewer-bot <your question>` on a PR | Bot answers using the PR diff and description as context |
 | **Thread reply** | Tag `@pr-reviewer-bot` in a review comment thread | Bot replies with context from the thread history and surrounding code |
 
 ### Automatic reviews
 
-Once installed on a repository, the bot will automatically review every new pull request and every push to an existing PR. Reviews appear as PR review comments with inline suggestions categorized by severity (critical / warning / suggestion).
+Once installed on a repository, the bot will automatically review a pull request when it is first opened or reopened. It will not trigger on subsequent commits pushed to the PR. Reviews appear as PR review comments with inline suggestions categorized by severity (critical / warning / suggestion).
 
 Set `REVIEW_ON_OPEN=false` in your `.env` to disable auto-reviews and only use on-demand mode.
 
@@ -200,7 +200,7 @@ See [AI SDK Providers](https://ai-sdk.dev/providers) for all supported providers
 | `AI_MODEL` | `claude-sonnet-4-20250514` | Model ID to use |
 | `BOT_NAME` | `pr-reviewer-bot` | Bot name for @mentions |
 | `MAX_DIFF_SIZE` | `50000` | Max diff characters sent to the AI |
-| `REVIEW_ON_OPEN` | `true` | Auto-review new/updated PRs |
+| `REVIEW_ON_OPEN` | `true` | Auto-review when a PR is opened or reopened |
 
 ## Project Structure
 
@@ -209,7 +209,7 @@ src/
   index.ts              # App entry point, registers webhook handlers
   config.ts             # Environment-based configuration
   handlers/
-    pull-request.ts     # PR opened/synchronized handler
+    pull-request.ts     # PR opened/reopened handler
     comment.ts          # Issue comment handler (@mention + /ai-review)
     review-comment.ts   # Review thread comment handler
   services/
