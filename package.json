@@ -8,6 +8,8 @@
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "build": "tsc",
+    "build:lambda": "node esbuild.config.mjs",
+    "deploy": "./scripts/deploy.sh",
     "typecheck": "tsc --noEmit"
   },
   "engines": {
@@ -21,7 +23,9 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.160",
     "@types/node": "^25.3.0",
+    "esbuild": "^0.27.3",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }

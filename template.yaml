@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: AWS::Serverless-2016-10-31
+Description: PR Reviewer - AI-powered GitHub PR review bot
+
+Globals:
+  Function:
+    Timeout: 300
+    MemorySize: 512
+    Runtime: nodejs20.x
+
+Parameters:
+  AppId:
+    Type: String
+    Description: GitHub App ID
+  PrivateKeyBase64:
+    Type: String
+    NoEcho: true
+    Description: GitHub App private key (base64-encoded PEM)
+  WebhookSecret:
+    Type: String
+    NoEcho: true
+    Description: GitHub webhook secret
+  AnthropicApiKey:
+    Type: String
+    NoEcho: true
+    Description: Anthropic API key
+  AiModel:
+    Type: String
+    Default: claude-sonnet-4-20250514
+    Description: AI model to use for reviews
+  BotName:
+    Type: String
+    Default: pr-reviewer-bot
+    Description: GitHub App bot name (without [bot] suffix)
+  MaxDiffSize:
+    Type: String
+    Default: "50000"
+    Description: Maximum diff size in characters before truncation
+
+Resources:
+  WebhookApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      StageName: $default
+
+  PRReviewerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: dist/lambda/
+      Handler: index.handler
+      Architectures:
+        - arm64
+      Events:
+        Webhook:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref WebhookApi
+            Path: /{proxy+}
+            Method: ANY
+        Root:
+          Type: HttpApi
+          Properties:
+            ApiId: !Ref WebhookApi
+            Path: /
+            Method: ANY
+      Environment:
+        Variables:
+          APP_ID: !Ref AppId
+          PRIVATE_KEY_BASE64: !Ref PrivateKeyBase64
+          WEBHOOK_SECRET: !Ref WebhookSecret
+          ANTHROPIC_API_KEY: !Ref AnthropicApiKey
+          AI_MODEL: !Ref AiModel
+          BOT_NAME: !Ref BotName
+          MAX_DIFF_SIZE: !Ref MaxDiffSize
+          NODE_OPTIONS: "--enable-source-maps"
+    Metadata:
+      BuildMethod: nodejs20.x
+
+Outputs:
+  WebhookUrl:
+    Description: URL to set as the GitHub App webhook endpoint
+    Value: !Sub "https://${WebhookApi}.execute-api.${AWS::Region}.amazonaws.com"
+  FunctionArn:
+    Description: Lambda function ARN
+    Value: !GetAtt PRReviewerFunction.Arn
