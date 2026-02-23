@@ -125,6 +125,13 @@ smee -u https://smee.io/YOUR_CHANNEL --target http://localhost:3000/api/github/w
 
 ## Usage
 
+> **When is the bot triggered?**
+> The bot activates in two ways:
+> - **Automatically** — whenever a new pull request is opened or commits are pushed to an existing PR
+> - **On-demand** — whenever someone mentions `@<bot-name>` (e.g. `@liblaber`) in a PR comment or review thread, or posts `/ai-review`
+>
+> The bot name defaults to `pr-reviewer-bot`. Set `BOT_NAME` in your `.env` to match your GitHub App slug (e.g. `liblaber`).
+
 Once the bot is running and installed on a repository, it responds to three types of triggers:
 
 | Trigger | How to activate | What happens |
