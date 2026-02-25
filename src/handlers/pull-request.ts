@@ -6,7 +6,11 @@ import {
   type ChangedFile,
   type ReactionTarget,
 } from "../services/github.js";
-import { reviewPR, type ReviewComment, type ReviewResponse } from "../services/ai.js";
+import {
+  reviewPR,
+  type ReviewComment,
+  type ReviewResponse,
+} from "../services/ai.js";
 import { config } from "../config.js";
 
 const SEVERITY_EMOJI: Record<string, string> = {
@@ -16,7 +20,9 @@ const SEVERITY_EMOJI: Record<string, string> = {
 };
 
 export async function handlePullRequest(
-  context: Context<"pull_request.opened" | "pull_request.synchronize" | "pull_request.reopened">,
+  context: Context<
+    "pull_request.opened" | "pull_request.synchronize" | "pull_request.reopened"
+  >,
 ): Promise<void> {
   if (!config.reviewOnOpen) {
     context.log.info("Auto-review disabled, skipping");
@@ -37,32 +43,41 @@ export async function handlePullRequest(
   const review = await reviewPR(pr);
 
   if (review.comments.length === 0) {
-    const body = review.summary || "Reviewed the changes — everything looks good. No issues found.";
-    const { data: postedReview } = await context.octokit.rest.pulls.createReview({
-      ...context.repo(),
-      pull_number: pr.number,
-      event: "COMMENT",
-      body,
-    });
+    const body =
+      review.summary ||
+      "Reviewed the changes — everything looks good. No issues found.";
+    const { data: postedReview } =
+      await context.octokit.rest.pulls.createReview({
+        ...context.repo(),
+        pull_number: pr.number,
+        event: "COMMENT",
+        body,
+      });
     context.log.info(`Posted review: ${postedReview.html_url}`);
     await removeEyesReaction(context, target, reactionId);
     return;
   }
 
-  const { inline, nonInline } = splitReviewComments(review.comments, pr.changedFiles);
+  const { inline, nonInline } = splitReviewComments(
+    review.comments,
+    pr.changedFiles,
+  );
 
   if (inline.length === 0) {
     const summary = formatSummaryComment(review.comments);
     const body = review.summary
       ? `${review.summary}\n\n---\n\n${summary}`
       : summary;
-    const { data: fallbackReview } = await context.octokit.rest.pulls.createReview({
-      ...context.repo(),
-      pull_number: pr.number,
-      event: "COMMENT",
-      body,
-    });
-    context.log.info(`Posted review (summary only): ${fallbackReview.html_url}`);
+    const { data: fallbackReview } =
+      await context.octokit.rest.pulls.createReview({
+        ...context.repo(),
+        pull_number: pr.number,
+        event: "COMMENT",
+        body,
+      });
+    context.log.info(
+      `Posted review (summary only): ${fallbackReview.html_url}`,
+    );
     await removeEyesReaction(context, target, reactionId);
     return;
   }
@@ -80,7 +95,9 @@ export async function handlePullRequest(
     comments: inline,
   });
 
-  context.log.info(`Posted review with ${inline.length} inline comment(s): ${inlineReview.html_url}`);
+  context.log.info(
+    `Posted review with ${inline.length} inline comment(s): ${inlineReview.html_url}`,
+  );
   await removeEyesReaction(context, target, reactionId);
 }
 
@@ -91,7 +108,10 @@ export async function handleOnDemandReview(
   context: Context<"issue_comment.created">,
   pullNumber: number,
 ): Promise<void> {
-  const commentTarget: ReactionTarget = { type: "issueComment", commentId: context.payload.comment.id };
+  const commentTarget: ReactionTarget = {
+    type: "issueComment",
+    commentId: context.payload.comment.id,
+  };
   const reactionId = await addEyesReaction(context, commentTarget);
 
   const { owner, repo } = context.repo();
@@ -143,34 +163,45 @@ export async function handleOnDemandReview(
   const review = await reviewPR(pr);
 
   if (review.comments.length === 0) {
-    const body = review.summary || "Reviewed the changes — everything looks good. No issues found.";
-    const { data: postedReview } = await context.octokit.rest.pulls.createReview({
-      owner,
-      repo,
-      pull_number: pullNumber,
-      event: "COMMENT",
-      body,
-    });
-    context.log.info(`Posted on-demand review (no issues): ${postedReview.html_url}`);
+    const body =
+      review.summary ||
+      "Reviewed the changes — everything looks good. No issues found.";
+    const { data: postedReview } =
+      await context.octokit.rest.pulls.createReview({
+        owner,
+        repo,
+        pull_number: pullNumber,
+        event: "COMMENT",
+        body,
+      });
+    context.log.info(
+      `Posted on-demand review (no issues): ${postedReview.html_url}`,
+    );
     await removeEyesReaction(context, commentTarget, reactionId);
     return;
   }
 
-  const { inline, nonInline } = splitReviewComments(review.comments, pr.changedFiles);
+  const { inline, nonInline } = splitReviewComments(
+    review.comments,
+    pr.changedFiles,
+  );
 
   if (inline.length === 0) {
     const summary = formatSummaryComment(review.comments);
     const body = review.summary
       ? `${review.summary}\n\n---\n\n${summary}`
       : summary;
-    const { data: fallbackReview } = await context.octokit.rest.pulls.createReview({
-      owner,
-      repo,
-      pull_number: pullNumber,
-      event: "COMMENT",
-      body,
-    });
-    context.log.info(`Posted on-demand review (summary only): ${fallbackReview.html_url}`);
+    const { data: fallbackReview } =
+      await context.octokit.rest.pulls.createReview({
+        owner,
+        repo,
+        pull_number: pullNumber,
+        event: "COMMENT",
+        body,
+      });
+    context.log.info(
+      `Posted on-demand review (summary only): ${fallbackReview.html_url}`,
+    );
     await removeEyesReaction(context, commentTarget, reactionId);
     return;
   }
@@ -189,7 +220,9 @@ export async function handleOnDemandReview(
     comments: inline,
   });
 
-  context.log.info(`Posted on-demand review with ${inline.length} inline comment(s): ${inlineReview.html_url}`);
+  context.log.info(
+    `Posted on-demand review with ${inline.length} inline comment(s): ${inlineReview.html_url}`,
+  );
   await removeEyesReaction(context, commentTarget, reactionId);
 }
 
@@ -220,7 +253,12 @@ function parseDiffLines(patch: string): Set<number> {
   return valid;
 }
 
-type FormattedComment = { path: string; line: number; start_line?: number; body: string };
+type FormattedComment = {
+  path: string;
+  line: number;
+  start_line?: number;
+  body: string;
+};
 
 /**
  * Split AI review comments into those that can be placed as inline review
@@ -247,7 +285,8 @@ function splitReviewComments(
       continue;
     }
 
-    const startLine = c.start_line && c.start_line > 0 ? c.start_line : undefined;
+    const startLine =
+      c.start_line && c.start_line > 0 ? c.start_line : undefined;
     if (startLine !== undefined) {
       let rangeValid = true;
       for (let l = startLine; l <= c.line; l++) {
@@ -265,7 +304,7 @@ function splitReviewComments(
     const comment: FormattedComment = {
       path: c.file,
       line: c.line,
-      body: `${SEVERITY_EMOJI[c.severity] ?? ""} **${c.severity.toUpperCase()}**\n\n${c.body}`,
+      body: `${SEVERITY_EMOJI[c.severity] ?? ""} **${c.severity}**\n\n${c.body}`,
     };
     if (startLine !== undefined) {
       comment.start_line = startLine;
@@ -289,9 +328,11 @@ function buildSummary(comments: ReviewComment[], aiSummary?: string): string {
     parts.push("");
   }
 
-  if (counts.critical > 0) parts.push(`- 🔴 **${counts.critical}** critical issue(s)`);
+  if (counts.critical > 0)
+    parts.push(`- 🔴 **${counts.critical}** critical issue(s)`);
   if (counts.warning > 0) parts.push(`- 🟡 **${counts.warning}** warning(s)`);
-  if (counts.suggestion > 0) parts.push(`- 🔵 **${counts.suggestion}** suggestion(s)`);
+  if (counts.suggestion > 0)
+    parts.push(`- 🔵 **${counts.suggestion}** suggestion(s)`);
 
   return parts.join("\n");
 }
@@ -300,7 +341,7 @@ function formatSummaryComment(comments: ReviewComment[]): string {
   const lines = ["## AI Review\n"];
   for (const c of comments) {
     const emoji = SEVERITY_EMOJI[c.severity] ?? "";
-    lines.push(`### ${emoji} ${c.severity.toUpperCase()} — \`${c.file}\` (line ${c.line})\n`);
+    lines.push(`### ${emoji} ${c.severity} — \`${c.file}\` (line ${c.line})\n`);
     lines.push(c.body);
     lines.push("");
   }
