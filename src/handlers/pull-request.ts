@@ -21,11 +21,16 @@ const SEVERITY_EMOJI: Record<string, string> = {
 
 export async function handlePullRequest(
   context: Context<
-    "pull_request.opened" | "pull_request.synchronize" | "pull_request.reopened"
+    "pull_request.opened" | "pull_request.synchronize" | "pull_request.reopened" | "pull_request.ready_for_review"
   >,
 ): Promise<void> {
   if (!config.reviewOnOpen) {
     context.log.info("Auto-review disabled, skipping");
+    return;
+  }
+
+  if (context.payload.pull_request.draft) {
+    context.log.info("Draft PR, skipping review");
     return;
   }
 

@@ -7,7 +7,7 @@ export function app(probot: Probot): void {
   probot.log.info("PR Reviewer bot loaded");
 
   probot.on(
-    ["pull_request.opened", "pull_request.reopened"],
+    ["pull_request.opened", "pull_request.reopened", "pull_request.ready_for_review"],
     handlePullRequest,
   );
 
