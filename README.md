@@ -29,18 +29,24 @@ pnpm install
 
 1. Go to **GitHub Settings > Developer settings > GitHub Apps > New GitHub App**
 2. Fill in the basics:
-   - **Name**: `pr-reviewer-bot` (or your preferred name)
-   - **Homepage URL**: any valid URL
-   - **Webhook URL**: your server URL + `/api/github/webhooks` (use [smee.io](https://smee.io) for local dev)
-   - **Webhook secret**: generate a random string and save it
+
+- **Name**: `pr-reviewer-bot` (or your preferred name)
+- **Homepage URL**: any valid URL
+- **Webhook URL**: your server URL + `/api/github/webhooks` (use [smee.io](https://smee.io) for local dev)
+- **Webhook secret**: generate a random string and save it
+
 3. Set **Permissions**:
-   - **Pull requests**: Read & Write
-   - **Issues**: Read & Write
-   - **Contents**: Read-only
+
+- **Pull requests**: Read & Write
+- **Issues**: Read & Write
+- **Contents**: Read-only
+
 4. Subscribe to **events**:
-   - `Pull request`
-   - `Issue comment`
-   - `Pull request review comment`
+
+- `Pull request`
+- `Issue comment`
+- `Pull request review comment`
+
 5. Click **Create GitHub App**
 6. After creation, generate a **Private Key** (downloads a `.pem` file)
 7. Note the **App ID** from the app settings page
@@ -78,7 +84,7 @@ For the `PRIVATE_KEY`, you can either:
 
 For local development, use [smee.io](https://smee.io) to forward GitHub webhooks to your machine:
 
-1. Go to https://smee.io/new and copy the webhook proxy URL
+1. Go to [https://smee.io/new](https://smee.io/new) and copy the webhook proxy URL
 2. Set this URL as the **Webhook URL** in your GitHub App settings
 3. Install the smee client:
 
@@ -86,7 +92,7 @@ For local development, use [smee.io](https://smee.io) to forward GitHub webhooks
 npm install -g smee-client
 ```
 
-4. Start the proxy and the dev server:
+1. Start the proxy and the dev server:
 
 ```bash
 # Terminal 1: forward webhooks
@@ -116,13 +122,13 @@ pnpm install
 pnpm dev
 ```
 
-6. For local development, run [smee.io](https://smee.io) in a separate terminal to forward webhooks:
+1. For local development, run [smee.io](https://smee.io) in a separate terminal to forward webhooks:
 
 ```bash
 smee -u https://smee.io/YOUR_CHANNEL --target http://localhost:3000/api/github/webhooks
 ```
 
-7. Open a PR on the repo where you installed the app — the bot will automatically post a review on initial open.
+1. Open a PR on the repo where you installed the app — the bot will automatically post a review on initial open.
 
 ## Usage
 
@@ -130,9 +136,9 @@ smee -u https://smee.io/YOUR_CHANNEL --target http://localhost:3000/api/github/w
 The bot activates in two ways:
 
 - **Automatically** — when a pull request is first opened or reopened
-- **On-demand** — whenever someone mentions `@<bot-name>` (e.g. `@liblaber`) in a PR comment or review thread, or posts `/ai-review`
+- **On-demand** — whenever someone mentions `@<bot-name>` (e.g. `@botname`) in a PR comment or review thread, or posts `/ai-review`
 
-The bot name defaults to `pr-reviewer-bot`. Set `BOT_NAME` in your `.env` to match your GitHub App slug (e.g. `liblaber`).
+The bot name defaults to `pr-reviewer-bot`. Set `BOT_NAME` in your `.env` to match your GitHub App slug (e.g. PRettyHarsh).
 
 Once the bot is running and installed on a repository, it responds to three types of triggers:
 
@@ -187,7 +193,7 @@ import { openai } from "@ai-sdk/openai";
 // change getModel() to return openai("gpt-4o")
 ```
 
-3. Set `OPENAI_API_KEY` in your `.env`
+1. Set `OPENAI_API_KEY` in your `.env`
 
 See [AI SDK Providers](https://ai-sdk.dev/providers) for all supported providers.
 
