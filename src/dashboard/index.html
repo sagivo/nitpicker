@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PR Bot Analytics Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: #121a2f;
+        --panel-2: #1a2440;
+        --text: #e6ecff;
+        --muted: #9fb0db;
+        --ok: #4ade80;
+        --warn: #facc15;
+        --bad: #f87171;
+        --accent: #60a5fa;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+        background: linear-gradient(180deg, #0b1020 0%, #0f1630 100%);
+        color: var(--text);
+      }
+      .container { max-width: 1400px; margin: 24px auto; padding: 0 20px; }
+      h1 { margin: 0 0 8px; font-size: 28px; }
+      .sub { color: var(--muted); margin-bottom: 20px; }
+      .panel {
+        background: var(--panel);
+        border: 1px solid #27335d;
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      }
+      .filters {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(120px, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+      select, input, button {
+        width: 100%;
+        background: var(--panel-2);
+        color: var(--text);
+        border: 1px solid #34457a;
+        border-radius: 10px;
+        padding: 8px 10px;
+      }
+      button { cursor: pointer; background: #1c2d57; }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(150px, 1fr));
+        gap: 12px;
+        margin-bottom: 18px;
+      }
+      .card { background: var(--panel); border: 1px solid #27335d; border-radius: 14px; padding: 14px; }
+      .card .k { color: var(--muted); font-size: 12px; }
+      .card .v { font-size: 28px; margin-top: 6px; font-weight: 700; }
+      .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); } .accent { color: var(--accent); }
+      .grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+      }
+      .grid2 {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+      .table-wrap { overflow: auto; max-height: 480px; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th, td { padding: 10px; border-bottom: 1px solid #283761; text-align: left; }
+      th { position: sticky; top: 0; background: #172449; z-index: 1; }
+      a { color: #8ec5ff; text-decoration: none; }
+      @media (max-width: 1100px) {
+        .filters { grid-template-columns: repeat(2, 1fr); }
+        .cards { grid-template-columns: repeat(2, 1fr); }
+        .grid, .grid2 { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>PR Bot Analytics</h1>
+      <div class="sub">Slice usage by time, severity, outcome, and PR author.</div>
+
+      <div class="panel filters">
+        <div>
+          <label>Preset Range</label>
+          <select id="days">
+            <option value="7">Last 7 days</option>
+            <option value="14">Last 14 days</option>
+            <option value="30">Last 30 days</option>
+            <option value="0">Custom range</option>
+          </select>
+        </div>
+        <div>
+          <label>Start</label>
+          <input id="start" type="datetime-local" />
+        </div>
+        <div>
+          <label>End</label>
+          <input id="end" type="datetime-local" />
+        </div>
+        <div>
+          <label>Severity</label>
+          <select id="severity" multiple size="3"></select>
+        </div>
+        <div>
+          <label>Outcome</label>
+          <select id="outcome" multiple size="3"></select>
+        </div>
+        <div>
+          <label>Author</label>
+          <select id="author" multiple size="3"></select>
+        </div>
+        <div style="display:flex; align-items:flex-end; gap:8px;">
+          <button id="apply">Apply filters</button>
+        </div>
+      </div>
+
+      <div class="cards">
+        <div class="card"><div class="k">Total Suggestions</div><div id="mTotal" class="v accent">0</div></div>
+        <div class="card"><div class="k">Accepted</div><div id="mAccepted" class="v ok">0</div></div>
+        <div class="card"><div class="k">Rejected</div><div id="mRejected" class="v bad">0</div></div>
+        <div class="card"><div class="k">Ignored</div><div id="mIgnored" class="v warn">0</div></div>
+        <div class="card"><div class="k">PRs with Bot Suggestions</div><div id="mPrs" class="v">0</div></div>
+      </div>
+
+      <div class="grid">
+        <div class="panel">
+          <h3>Suggestion Outcomes Over Time</h3>
+          <canvas id="trendChart" height="120"></canvas>
+        </div>
+        <div class="panel">
+          <h3>Outcome Distribution</h3>
+          <canvas id="outcomeChart" height="120"></canvas>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="panel">
+          <h3>Severity × Outcome Matrix</h3>
+          <canvas id="severityChart" height="140"></canvas>
+        </div>
+        <div class="panel table-wrap">
+          <h3>Top PRs by Accepted Suggestions</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>PR</th>
+                <th>Author</th>
+                <th>Total</th>
+                <th>Accepted</th>
+                <th>Rejected</th>
+                <th>Ignored</th>
+              </tr>
+            </thead>
+            <tbody id="prsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      let trendChart, outcomeChart, severityChart;
+
+      function selectedValues(el) {
+        return Array.from(el.selectedOptions).map((o) => o.value);
+      }
+
+      function toIsoLocal(value) {
+        if (!value) return "";
+        const d = new Date(value);
+        return d.toISOString();
+      }
+
+      function buildQuery() {
+        const params = new URLSearchParams();
+        const days = $("days").value;
+        const start = $("start").value;
+        const end = $("end").value;
+        if (days !== "0") {
+          params.set("days", days);
+        } else {
+          if (start) params.set("start", toIsoLocal(start));
+          if (end) params.set("end", toIsoLocal(end));
+        }
+        const severities = selectedValues($("severity"));
+        const outcomes = selectedValues($("outcome"));
+        const authors = selectedValues($("author"));
+        if (severities.length) params.set("severities", severities.join(","));
+        if (outcomes.length) params.set("outcomes", outcomes.join(","));
+        if (authors.length) params.set("authors", authors.join(","));
+        return params.toString();
+      }
+
+      async function getJson(path) {
+        const query = buildQuery();
+        const res = await fetch(query ? `${path}?${query}` : path);
+        if (!res.ok) throw new Error(`${path} failed`);
+        return res.json();
+      }
+
+      function upsertChart(chartRef, ctx, config) {
+        if (chartRef) chartRef.destroy();
+        return new Chart(ctx, config);
+      }
+
+      function renderMetrics(summary) {
+        $("mTotal").textContent = summary.totals.totalSuggestions;
+        $("mAccepted").textContent = `${summary.totals.accepted} (${(summary.rates.acceptedRate * 100).toFixed(1)}%)`;
+        $("mRejected").textContent = `${summary.totals.rejected} (${(summary.rates.rejectedRate * 100).toFixed(1)}%)`;
+        $("mIgnored").textContent = `${summary.totals.ignored} (${(summary.rates.ignoredRate * 100).toFixed(1)}%)`;
+        $("mPrs").textContent = summary.totals.prsWithBotSuggestions;
+      }
+
+      function renderTrends(trends) {
+        const labels = trends.map((d) => d.day);
+        trendChart = upsertChart(trendChart, $("trendChart"), {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              { label: "Accepted", data: trends.map((d) => d.accepted), borderColor: "#4ade80", tension: 0.2 },
+              { label: "Rejected", data: trends.map((d) => d.rejected), borderColor: "#f87171", tension: 0.2 },
+              { label: "Ignored", data: trends.map((d) => d.ignored), borderColor: "#facc15", tension: 0.2 },
+              { label: "Total", data: trends.map((d) => d.total), borderColor: "#60a5fa", tension: 0.2 }
+            ]
+          },
+          options: { responsive: true, plugins: { legend: { labels: { color: "#e6ecff" } } }, scales: { x: { ticks: { color: "#b7c6ee" } }, y: { ticks: { color: "#b7c6ee" } } } }
+        });
+      }
+
+      function renderOutcome(summary) {
+        outcomeChart = upsertChart(outcomeChart, $("outcomeChart"), {
+          type: "doughnut",
+          data: {
+            labels: ["Accepted", "Rejected", "Ignored"],
+            datasets: [{ data: [summary.totals.accepted, summary.totals.rejected, summary.totals.ignored], backgroundColor: ["#4ade80", "#f87171", "#facc15"] }]
+          },
+          options: { plugins: { legend: { labels: { color: "#e6ecff" } } } }
+        });
+      }
+
+      function renderSeverityMatrix(rows) {
+        const severities = ["critical", "warning", "suggestion"];
+        const outcomes = ["accepted", "rejected", "ignored"];
+        const matrix = {};
+        rows.forEach((r) => { matrix[`${r.severity}:${r.outcome}`] = r.count; });
+
+        severityChart = upsertChart(severityChart, $("severityChart"), {
+          type: "bar",
+          data: {
+            labels: severities,
+            datasets: outcomes.map((o, idx) => ({
+              label: o,
+              data: severities.map((s) => matrix[`${s}:${o}`] || 0),
+              backgroundColor: ["#4ade80", "#f87171", "#facc15"][idx]
+            }))
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { labels: { color: "#e6ecff" } } },
+            scales: { x: { stacked: true, ticks: { color: "#b7c6ee" } }, y: { stacked: true, ticks: { color: "#b7c6ee" } } }
+          }
+        });
+      }
+
+      function renderTopPrs(rows) {
+        $("prsBody").innerHTML = rows
+          .map((r) => `
+            <tr>
+              <td><a href="${r.url}" target="_blank" rel="noreferrer">#${r.prNumber}</a><div style="font-size:12px;color:#9fb0db;">${r.title}</div></td>
+              <td>${r.author}</td>
+              <td>${r.totalSuggestions}</td>
+              <td style="color:#4ade80;">${r.acceptedSuggestions}</td>
+              <td style="color:#f87171;">${r.rejectedSuggestions}</td>
+              <td style="color:#facc15;">${r.ignoredSuggestions}</td>
+            </tr>
+          `)
+          .join("");
+      }
+
+      async function loadFilters() {
+        const options = await (await fetch("/api/filters")).json();
+        for (const [id, vals] of [["severity", options.severities], ["outcome", options.outcomes], ["author", options.authors]]) {
+          const el = $(id);
+          el.innerHTML = vals.map((v) => `<option value="${v}">${v}</option>`).join("");
+        }
+      }
+
+      async function refresh() {
+        const [summary, trends, sevOut, topPrs] = await Promise.all([
+          getJson("/api/summary"),
+          getJson("/api/trends"),
+          getJson("/api/severity-outcome"),
+          getJson("/api/top-prs")
+        ]);
+        renderMetrics(summary);
+        renderTrends(trends);
+        renderOutcome(summary);
+        renderSeverityMatrix(sevOut);
+        renderTopPrs(topPrs);
+      }
+
+      $("apply").addEventListener("click", refresh);
+      $("days").addEventListener("change", () => {
+        const custom = $("days").value === "0";
+        $("start").disabled = !custom;
+        $("end").disabled = !custom;
+      });
+
+      (async function init() {
+        await loadFilters();
+        $("days").dispatchEvent(new Event("change"));
+        await refresh();
+      })();
+    </script>
+  </body>
+</html>

@@ -181,6 +181,33 @@ Tag the bot in a review comment thread:
 
 > **Important:** The `@pr-reviewer-bot` mention must match the **slug** of your GitHub App (lowercase, hyphenated). For example, if your GitHub App is named "My PR Reviewer", the slug is `my-pr-reviewer` and users would tag `@my-pr-reviewer`. Set `BOT_NAME` in your `.env` to match.
 
+## Analytics dashboard (SQLite)
+
+After collecting stats, you can run a local dashboard for slicing by date range, severity, outcome, and PR author.
+
+1. Collect data:
+
+```bash
+pnpm collect-stats postman-eng/postman-app
+```
+
+2. Start dashboard:
+
+```bash
+pnpm dashboard
+```
+
+3. Open:
+
+```text
+http://localhost:8787
+```
+
+Optional env vars:
+
+- `SQLITE_PATH` (default `./pr_reviewer_stats.db`)
+- `DASHBOARD_PORT` (default `8787`)
+
 ## Switching AI Providers
 
 The service uses Vercel AI SDK, so you can swap the AI provider by changing the model configuration. For example, to use OpenAI:
