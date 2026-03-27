@@ -288,14 +288,27 @@ export async function fetchReviewerGuide(
     const { data } = await octokit.rest.repos.getContent({
       owner,
       repo,
+      // Always read from the default branch; the guide is a repo-level config, not per-PR.
       path: "REVIEWER.md",
     });
 
     if ("content" in data && data.encoding === "base64") {
-      return Buffer.from(data.content, "base64").toString("utf-8");
+      let content = Buffer.from(data.content, "base64").toString("utf-8");
+      if (content.length > config.maxReviewerGuideSize) {
+        content =
+          content.slice(0, config.maxReviewerGuideSize) +
+          "\n\n[reviewer guide truncated]";
+      }
+      return content;
     }
-  } catch {
-    // REVIEWER.md doesn't exist in this repo — that's fine
+  } catch (err: any) {
+    if (err?.status !== 404) {
+      console.warn(
+        "fetchReviewerGuide: unexpected error",
+        err?.status,
+        err?.message,
+      );
+    }
   }
   return undefined;
 }
