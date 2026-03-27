@@ -9,6 +9,7 @@ export interface PRDetails {
   body: string;
   diff: string;
   changedFiles: ChangedFile[];
+  reviewerGuide?: string;
 }
 
 export interface ChangedFile {
@@ -31,12 +32,14 @@ export interface ThreadComment {
  * Truncates the diff if it exceeds the configured max size.
  */
 export async function fetchPRDetails(
-  context: Context<"pull_request" | "pull_request.opened" | "pull_request.synchronize">,
+  context: Context<
+    "pull_request" | "pull_request.opened" | "pull_request.synchronize"
+  >,
 ): Promise<PRDetails> {
   const { owner, repo } = context.repo();
   const number = context.payload.pull_request.number;
 
-  const [diffResponse, filesResponse] = await Promise.all([
+  const [diffResponse, filesResponse, reviewerGuide] = await Promise.all([
     context.octokit.rest.pulls.get({
       owner,
       repo,
@@ -49,6 +52,7 @@ export async function fetchPRDetails(
       pull_number: number,
       per_page: 100,
     }),
+    fetchReviewerGuide(context.octokit, owner, repo),
   ]);
 
   let diff = String(diffResponse.data);
@@ -72,6 +76,7 @@ export async function fetchPRDetails(
     body: context.payload.pull_request.body ?? "",
     diff,
     changedFiles,
+    reviewerGuide,
   };
 }
 
@@ -85,21 +90,23 @@ export async function fetchPRDetailsFromIssue(
 ): Promise<PRDetails> {
   const { owner, repo } = context.repo();
 
-  const [prResponse, diffResponse, filesResponse] = await Promise.all([
-    context.octokit.rest.pulls.get({ owner, repo, pull_number: pullNumber }),
-    context.octokit.rest.pulls.get({
-      owner,
-      repo,
-      pull_number: pullNumber,
-      mediaType: { format: "diff" },
-    }),
-    context.octokit.rest.pulls.listFiles({
-      owner,
-      repo,
-      pull_number: pullNumber,
-      per_page: 100,
-    }),
-  ]);
+  const [prResponse, diffResponse, filesResponse, reviewerGuide] =
+    await Promise.all([
+      context.octokit.rest.pulls.get({ owner, repo, pull_number: pullNumber }),
+      context.octokit.rest.pulls.get({
+        owner,
+        repo,
+        pull_number: pullNumber,
+        mediaType: { format: "diff" },
+      }),
+      context.octokit.rest.pulls.listFiles({
+        owner,
+        repo,
+        pull_number: pullNumber,
+        per_page: 100,
+      }),
+      fetchReviewerGuide(context.octokit, owner, repo),
+    ]);
 
   let diff = String(diffResponse.data);
   if (diff.length > config.maxDiffSize) {
@@ -123,6 +130,7 @@ export async function fetchPRDetailsFromIssue(
     body: pr.body ?? "",
     diff,
     changedFiles,
+    reviewerGuide,
   };
 }
 
@@ -131,8 +139,15 @@ export async function fetchPRDetailsFromIssue(
  * `in_reply_to_id` chain back to the root, then fetching siblings.
  */
 export async function fetchReviewThread(
-  context: Context<"pull_request_review_comment" | "pull_request_review_comment.created">,
-): Promise<{ rootComment: ThreadComment; thread: ThreadComment[]; filePath: string; diffHunk: string }> {
+  context: Context<
+    "pull_request_review_comment" | "pull_request_review_comment.created"
+  >,
+): Promise<{
+  rootComment: ThreadComment;
+  thread: ThreadComment[];
+  filePath: string;
+  diffHunk: string;
+}> {
   const { owner, repo } = context.repo();
   const pullNumber = context.payload.pull_request.number;
   const comment = context.payload.comment;
@@ -149,7 +164,8 @@ export async function fetchReviewThread(
   );
 
   threadComments.sort(
-    (a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    (a: any, b: any) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
   );
 
   const root = threadComments[0];
@@ -192,19 +208,21 @@ export async function addEyesReaction(
       return data.id;
     }
     case "issueComment": {
-      const { data } = await context.octokit.rest.reactions.createForIssueComment({
-        ...repo,
-        comment_id: target.commentId,
-        content: "eyes",
-      });
+      const { data } =
+        await context.octokit.rest.reactions.createForIssueComment({
+          ...repo,
+          comment_id: target.commentId,
+          content: "eyes",
+        });
       return data.id;
     }
     case "reviewComment": {
-      const { data } = await context.octokit.rest.reactions.createForPullRequestReviewComment({
-        ...repo,
-        comment_id: target.commentId,
-        content: "eyes",
-      });
+      const { data } =
+        await context.octokit.rest.reactions.createForPullRequestReviewComment({
+          ...repo,
+          comment_id: target.commentId,
+          content: "eyes",
+        });
       return data.id;
     }
   }
@@ -259,4 +277,25 @@ export function isBotMentioned(body: string): boolean {
 export function stripBotMention(body: string): string {
   const mention = new RegExp(`@${config.botName}\\s*`, "gi");
   return body.replace(mention, "").trim();
+}
+
+export async function fetchReviewerGuide(
+  octokit: Context<any>["octokit"],
+  owner: string,
+  repo: string,
+): Promise<string | undefined> {
+  try {
+    const { data } = await octokit.rest.repos.getContent({
+      owner,
+      repo,
+      path: "REVIEWER.md",
+    });
+
+    if ("content" in data && data.encoding === "base64") {
+      return Buffer.from(data.content, "base64").toString("utf-8");
+    }
+  } catch {
+    // REVIEWER.md doesn't exist in this repo — that's fine
+  }
+  return undefined;
 }
