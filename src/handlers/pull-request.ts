@@ -1,6 +1,7 @@
 import type { Context } from "probot";
 import {
   fetchPRDetails,
+  fetchReviewerGuide,
   addEyesReaction,
   removeEyesReaction,
   type ChangedFile,
@@ -21,7 +22,10 @@ const SEVERITY_EMOJI: Record<string, string> = {
 
 export async function handlePullRequest(
   context: Context<
-    "pull_request.opened" | "pull_request.synchronize" | "pull_request.reopened" | "pull_request.ready_for_review"
+    | "pull_request.opened"
+    | "pull_request.synchronize"
+    | "pull_request.reopened"
+    | "pull_request.ready_for_review"
   >,
 ): Promise<void> {
   if (!config.reviewOnOpen) {
@@ -127,7 +131,7 @@ export async function handleOnDemandReview(
     pull_number: pullNumber,
   });
 
-  const [diffResponse, filesResponse] = await Promise.all([
+  const [diffResponse, filesResponse, reviewerGuide] = await Promise.all([
     context.octokit.rest.pulls.get({
       owner,
       repo,
@@ -140,6 +144,7 @@ export async function handleOnDemandReview(
       pull_number: pullNumber,
       per_page: 100,
     }),
+    fetchReviewerGuide(context.octokit, owner, repo),
   ]);
 
   let diff = String(diffResponse.data);
@@ -161,6 +166,7 @@ export async function handleOnDemandReview(
       deletions: f.deletions,
       patch: f.patch,
     })),
+    reviewerGuide,
   };
 
   context.log.info(`On-demand review for PR #${pullNumber}`);
