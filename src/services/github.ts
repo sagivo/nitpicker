@@ -366,30 +366,29 @@ export async function fetchCopilotInstructions(
   return undefined;
 }
 
-/**
- * Parse YAML frontmatter from a markdown file.
- * Expects a document starting with `---` and ending with `---`.
- * Returns the raw frontmatter key-value pairs and the remaining body.
- */
 function parseFrontmatter(raw: string): {
   applyTo?: string;
   body: string;
 } {
-  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
+  // Strip UTF-8 BOM if present
+  const cleaned = raw.startsWith("\uFEFF") ? raw.slice(1) : raw;
+
+  // Tolerate trailing spaces on --- delimiters
+  const match = cleaned.match(/^---\s*\r?\n([\s\S]*?)\r?\n---\s*\r?\n([\s\S]*)$/);
   if (!match) {
-    return { body: raw };
+    return { body: cleaned };
   }
 
   const frontmatter = match[1];
   const body = match[2];
 
-  // Simple key: "value" parser — sufficient for applyTo
+  // Match applyTo with properly paired quotes: "val", 'val', or unquoted val
   const applyToMatch = frontmatter.match(
-    /^applyTo:\s*["']?(.*?)["']?\s*$/m,
+    /^applyTo:\s*(?:"([^"]*)"|'([^']*)'|(\S.*?))\s*$/m,
   );
 
   return {
-    applyTo: applyToMatch?.[1],
+    applyTo: applyToMatch?.[1] ?? applyToMatch?.[2] ?? applyToMatch?.[3],
     body,
   };
 }
@@ -432,9 +431,11 @@ export async function fetchPathInstructions(
       }
     }
 
-    // Check one level of subdirectories for instruction files
+    const MAX_SUBDIRS = 5;
+    const MAX_INSTRUCTION_FILES = 15;
+
     const subDirResults = await Promise.all(
-      subDirs.map(async (dirPath) => {
+      subDirs.slice(0, MAX_SUBDIRS).map(async (dirPath) => {
         try {
           const { data: subEntries } = await octokit.rest.repos.getContent({
             owner,
@@ -461,9 +462,8 @@ export async function fetchPathInstructions(
       filePaths.push(...paths);
     }
 
-    // Fetch file contents in parallel
     const fileResults = await Promise.all(
-      filePaths.map(async (filePath) => {
+      filePaths.slice(0, MAX_INSTRUCTION_FILES).map(async (filePath) => {
         try {
           const { data } = await octokit.rest.repos.getContent({
             owner,
@@ -475,13 +475,7 @@ export async function fetchPathInstructions(
             const raw = Buffer.from(data.content, "base64").toString("utf-8");
             const { applyTo, body } = parseFrontmatter(raw);
             if (applyTo && body.trim()) {
-              let content = body.trim();
-              if (content.length > config.maxCopilotInstructionsSize) {
-                content =
-                  content.slice(0, config.maxCopilotInstructionsSize) +
-                  "\n\n[path instructions truncated]";
-              }
-              return { applyTo, content };
+              return { applyTo, content: body.trim() };
             }
           }
         } catch {
@@ -491,10 +485,19 @@ export async function fetchPathInstructions(
       }),
     );
 
+    let totalSize = 0;
     for (const result of fileResults) {
-      if (result) {
+      if (!result) continue;
+      totalSize += result.content.length;
+      if (totalSize > config.maxCopilotInstructionsSize) {
+        const overshoot = totalSize - config.maxCopilotInstructionsSize;
+        result.content =
+          result.content.slice(0, result.content.length - overshoot) +
+          "\n\n[path instructions truncated — aggregate limit reached]";
         instructions.push(result);
+        break;
       }
+      instructions.push(result);
     }
   } catch (err: any) {
     if (err?.status !== 404) {
