@@ -2,6 +2,8 @@ import type { Context } from "probot";
 import {
   fetchPRDetails,
   fetchReviewerGuide,
+  fetchCopilotInstructions,
+  fetchPathInstructions,
   addEyesReaction,
   removeEyesReaction,
   type ChangedFile,
@@ -131,21 +133,24 @@ export async function handleOnDemandReview(
     pull_number: pullNumber,
   });
 
-  const [diffResponse, filesResponse, reviewerGuide] = await Promise.all([
-    context.octokit.rest.pulls.get({
-      owner,
-      repo,
-      pull_number: pullNumber,
-      mediaType: { format: "diff" },
-    }),
-    context.octokit.rest.pulls.listFiles({
-      owner,
-      repo,
-      pull_number: pullNumber,
-      per_page: 100,
-    }),
-    fetchReviewerGuide(context.octokit, owner, repo),
-  ]);
+  const [diffResponse, filesResponse, reviewerGuide, copilotInstructions, pathInstructions] =
+    await Promise.all([
+      context.octokit.rest.pulls.get({
+        owner,
+        repo,
+        pull_number: pullNumber,
+        mediaType: { format: "diff" },
+      }),
+      context.octokit.rest.pulls.listFiles({
+        owner,
+        repo,
+        pull_number: pullNumber,
+        per_page: 100,
+      }),
+      fetchReviewerGuide(context.octokit, owner, repo),
+      fetchCopilotInstructions(context.octokit, owner, repo),
+      fetchPathInstructions(context.octokit, owner, repo),
+    ]);
 
   let diff = String(diffResponse.data);
   if (diff.length > config.maxDiffSize) {
@@ -167,6 +172,8 @@ export async function handleOnDemandReview(
       patch: f.patch,
     })),
     reviewerGuide,
+    copilotInstructions,
+    pathInstructions: pathInstructions.length > 0 ? pathInstructions : undefined,
   };
 
   context.log.info(`On-demand review for PR #${pullNumber}`);

@@ -5,5 +5,8 @@ export const config = {
   aiModel: process.env.AI_MODEL ?? "claude-sonnet-4-20250514",
   maxDiffSize: Number(process.env.MAX_DIFF_SIZE ?? 50_000),
   maxReviewerGuideSize: Number(process.env.MAX_REVIEWER_GUIDE_SIZE ?? 20_000),
+  maxCopilotInstructionsSize: Number(
+    process.env.MAX_COPILOT_INSTRUCTIONS_SIZE ?? 20_000,
+  ),
   reviewOnOpen: process.env.REVIEW_ON_OPEN !== "false",
 } as const;

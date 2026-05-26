@@ -1,6 +1,11 @@
 import type { Context } from "probot";
 import { config } from "../config.js";
 
+export interface PathInstruction {
+  applyTo: string;
+  content: string;
+}
+
 export interface PRDetails {
   owner: string;
   repo: string;
@@ -10,6 +15,8 @@ export interface PRDetails {
   diff: string;
   changedFiles: ChangedFile[];
   reviewerGuide?: string;
+  copilotInstructions?: string;
+  pathInstructions?: PathInstruction[];
 }
 
 export interface ChangedFile {
@@ -39,21 +46,24 @@ export async function fetchPRDetails(
   const { owner, repo } = context.repo();
   const number = context.payload.pull_request.number;
 
-  const [diffResponse, filesResponse, reviewerGuide] = await Promise.all([
-    context.octokit.rest.pulls.get({
-      owner,
-      repo,
-      pull_number: number,
-      mediaType: { format: "diff" },
-    }),
-    context.octokit.rest.pulls.listFiles({
-      owner,
-      repo,
-      pull_number: number,
-      per_page: 100,
-    }),
-    fetchReviewerGuide(context.octokit, owner, repo),
-  ]);
+  const [diffResponse, filesResponse, reviewerGuide, copilotInstructions, pathInstructions] =
+    await Promise.all([
+      context.octokit.rest.pulls.get({
+        owner,
+        repo,
+        pull_number: number,
+        mediaType: { format: "diff" },
+      }),
+      context.octokit.rest.pulls.listFiles({
+        owner,
+        repo,
+        pull_number: number,
+        per_page: 100,
+      }),
+      fetchReviewerGuide(context.octokit, owner, repo),
+      fetchCopilotInstructions(context.octokit, owner, repo),
+      fetchPathInstructions(context.octokit, owner, repo),
+    ]);
 
   let diff = String(diffResponse.data);
   if (diff.length > config.maxDiffSize) {
@@ -77,6 +87,8 @@ export async function fetchPRDetails(
     diff,
     changedFiles,
     reviewerGuide,
+    copilotInstructions,
+    pathInstructions: pathInstructions.length > 0 ? pathInstructions : undefined,
   };
 }
 
@@ -90,7 +102,7 @@ export async function fetchPRDetailsFromIssue(
 ): Promise<PRDetails> {
   const { owner, repo } = context.repo();
 
-  const [prResponse, diffResponse, filesResponse, reviewerGuide] =
+  const [prResponse, diffResponse, filesResponse, reviewerGuide, copilotInstructions, pathInstructions] =
     await Promise.all([
       context.octokit.rest.pulls.get({ owner, repo, pull_number: pullNumber }),
       context.octokit.rest.pulls.get({
@@ -106,6 +118,8 @@ export async function fetchPRDetailsFromIssue(
         per_page: 100,
       }),
       fetchReviewerGuide(context.octokit, owner, repo),
+      fetchCopilotInstructions(context.octokit, owner, repo),
+      fetchPathInstructions(context.octokit, owner, repo),
     ]);
 
   let diff = String(diffResponse.data);
@@ -131,6 +145,8 @@ export async function fetchPRDetailsFromIssue(
     diff,
     changedFiles,
     reviewerGuide,
+    copilotInstructions,
+    pathInstructions: pathInstructions.length > 0 ? pathInstructions : undefined,
   };
 }
 
@@ -311,4 +327,184 @@ export async function fetchReviewerGuide(
     }
   }
   return undefined;
+}
+
+/**
+ * Fetch the repo-wide Copilot instructions file (.github/copilot-instructions.md).
+ * Returns the file content or undefined if the file does not exist.
+ */
+export async function fetchCopilotInstructions(
+  octokit: Context<any>["octokit"],
+  owner: string,
+  repo: string,
+): Promise<string | undefined> {
+  try {
+    const { data } = await octokit.rest.repos.getContent({
+      owner,
+      repo,
+      path: ".github/copilot-instructions.md",
+    });
+
+    if ("content" in data && data.encoding === "base64") {
+      let content = Buffer.from(data.content, "base64").toString("utf-8");
+      if (content.length > config.maxCopilotInstructionsSize) {
+        content =
+          content.slice(0, config.maxCopilotInstructionsSize) +
+          "\n\n[copilot instructions truncated]";
+      }
+      return content;
+    }
+  } catch (err: any) {
+    if (err?.status !== 404) {
+      console.warn(
+        "fetchCopilotInstructions: unexpected error",
+        err?.status,
+        err?.message,
+      );
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Parse YAML frontmatter from a markdown file.
+ * Expects a document starting with `---` and ending with `---`.
+ * Returns the raw frontmatter key-value pairs and the remaining body.
+ */
+function parseFrontmatter(raw: string): {
+  applyTo?: string;
+  body: string;
+} {
+  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
+  if (!match) {
+    return { body: raw };
+  }
+
+  const frontmatter = match[1];
+  const body = match[2];
+
+  // Simple key: "value" parser — sufficient for applyTo
+  const applyToMatch = frontmatter.match(
+    /^applyTo:\s*["']?(.*?)["']?\s*$/m,
+  );
+
+  return {
+    applyTo: applyToMatch?.[1],
+    body,
+  };
+}
+
+/**
+ * Fetch path-specific Copilot instruction files from .github/instructions/.
+ * Each file must end with `.instructions.md` and contain an `applyTo` frontmatter field.
+ * Returns an array of { applyTo, content } objects.
+ */
+export async function fetchPathInstructions(
+  octokit: Context<any>["octokit"],
+  owner: string,
+  repo: string,
+): Promise<PathInstruction[]> {
+  const instructions: PathInstruction[] = [];
+
+  try {
+    const { data: dirEntries } = await octokit.rest.repos.getContent({
+      owner,
+      repo,
+      path: ".github/instructions",
+    });
+
+    if (!Array.isArray(dirEntries)) {
+      return instructions;
+    }
+
+    // Collect all .instructions.md files (flat + nested dirs)
+    const filePaths: string[] = [];
+    const subDirs: string[] = [];
+
+    for (const entry of dirEntries) {
+      if (
+        entry.type === "file" &&
+        entry.name.endsWith(".instructions.md")
+      ) {
+        filePaths.push(entry.path);
+      } else if (entry.type === "dir") {
+        subDirs.push(entry.path);
+      }
+    }
+
+    // Check one level of subdirectories for instruction files
+    const subDirResults = await Promise.all(
+      subDirs.map(async (dirPath) => {
+        try {
+          const { data: subEntries } = await octokit.rest.repos.getContent({
+            owner,
+            repo,
+            path: dirPath,
+          });
+          if (Array.isArray(subEntries)) {
+            return subEntries
+              .filter(
+                (e: any) =>
+                  e.type === "file" &&
+                  e.name.endsWith(".instructions.md"),
+              )
+              .map((e: any) => e.path as string);
+          }
+        } catch {
+          // Subdirectory listing failed — skip it
+        }
+        return [];
+      }),
+    );
+
+    for (const paths of subDirResults) {
+      filePaths.push(...paths);
+    }
+
+    // Fetch file contents in parallel
+    const fileResults = await Promise.all(
+      filePaths.map(async (filePath) => {
+        try {
+          const { data } = await octokit.rest.repos.getContent({
+            owner,
+            repo,
+            path: filePath,
+          });
+
+          if ("content" in data && data.encoding === "base64") {
+            const raw = Buffer.from(data.content, "base64").toString("utf-8");
+            const { applyTo, body } = parseFrontmatter(raw);
+            if (applyTo && body.trim()) {
+              let content = body.trim();
+              if (content.length > config.maxCopilotInstructionsSize) {
+                content =
+                  content.slice(0, config.maxCopilotInstructionsSize) +
+                  "\n\n[path instructions truncated]";
+              }
+              return { applyTo, content };
+            }
+          }
+        } catch {
+          // Individual file fetch failed — skip it
+        }
+        return null;
+      }),
+    );
+
+    for (const result of fileResults) {
+      if (result) {
+        instructions.push(result);
+      }
+    }
+  } catch (err: any) {
+    if (err?.status !== 404) {
+      console.warn(
+        "fetchPathInstructions: unexpected error",
+        err?.status,
+        err?.message,
+      );
+    }
+  }
+
+  return instructions;
 }
