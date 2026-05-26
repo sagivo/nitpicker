@@ -14,6 +14,21 @@ Your goals:
 Do NOT produce JSON — respond in plain markdown.`;
 
 export function buildQuestionPrompt(pr: PRDetails, question: string): string {
+  const copilotSection = pr.copilotInstructions
+    ? `\n\n## Repository Context (from .github/copilot-instructions.md)\n<copilot-instructions>\n${pr.copilotInstructions}\n</copilot-instructions>`
+    : "";
+
+  const pathSection =
+    pr.pathInstructions && pr.pathInstructions.length > 0
+      ? "\n\n## Path-Specific Instructions\n" +
+        pr.pathInstructions
+          .map(
+            (pi) =>
+              `<path-instructions applyTo="${pi.applyTo}">\n${pi.content}\n</path-instructions>`,
+          )
+          .join("\n")
+      : "";
+
   return `## Pull Request Context
 **Title:** ${pr.title}
 **Description:** ${pr.body || "(no description)"}
@@ -25,6 +40,7 @@ ${pr.changedFiles.map((f) => `- ${f.filename} (+${f.additions}/-${f.deletions})`
 \`\`\`diff
 ${pr.diff}
 \`\`\`
+${copilotSection}${pathSection}
 
 ## Developer Question
 ${question}`;
