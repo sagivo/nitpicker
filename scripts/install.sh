@@ -35,9 +35,10 @@ warn() { printf "%s!%s %s\n" "$YELLOW" "$RESET" "$*"; }
 die()  { printf "error: %s\n" "$*" >&2; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
-# curl|bash leaves stdin as the script pipe — prefer the real terminal
+# curl|bash leaves stdin as the script pipe — prefer the real terminal.
+# -r/-w only check device-node perms; open can still fail without a TTY.
 TTY=""
-if [[ -r /dev/tty && -w /dev/tty ]]; then
+if [[ -e /dev/tty ]] && { : </dev/tty; } 2>/dev/null; then
   TTY="/dev/tty"
 fi
 
@@ -69,14 +70,17 @@ banner() {
 }
 
 ask() {
-  local q="$1" var="$2" def="${3:-}"
-  if [[ -n "$def" ]]; then
+  local q="$1" var="$2" def="${3-}"
+  # $#>=3 means a default was supplied (may be empty, e.g. optional org)
+  local has_def=false
+  (( $# >= 3 )) && has_def=true
+  if [[ "$has_def" == true && -n "$def" ]]; then
     printf "  %s %s[%s]%s: " "$q" "$DIM" "$def" "$RESET"
   else
     printf "  %s: " "$q"
   fi
   if ! can_prompt; then
-    [[ -n "$def" ]] || die "need a TTY to answer: $q"
+    [[ "$has_def" == true ]] || die "need a TTY to answer: $q"
     printf "%s\n" "$def"
     printf -v "$var" '%s' "$def"
     return

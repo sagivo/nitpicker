@@ -19,10 +19,10 @@ ok()   { printf "%s✓%s %s\n" "$GREEN" "$RESET" "$*"; }
 die()  { printf "%serror:%s %s\n" "$RED" "$RESET" "$*" >&2; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
-# curl|bash leaves stdin as the script pipe — talk to the real terminal
-if [[ -r /dev/tty && -w /dev/tty ]]; then
-  exec </dev/tty
-fi
+# curl|bash feeds the script on stdin. Do NOT exec </dev/tty here:
+# -r/-w on /dev/tty only check device-node perms; open can still fail
+# with "Device not configured" (no controlling TTY) and set -e aborts.
+# scripts/install.sh reads prompts from /dev/tty itself when available.
 
 printf "\n%s nitpicker %s\n\n" "$BOLD" "$RESET"
 
