@@ -26,8 +26,24 @@ You need an AWS account and an API key (Anthropic, OpenAI, or Google).
 
 ```bash
 # optional flags
-curl -fsSL https://nitpicker.dev/install | bash -s -- --org my-org --provider openai
+curl -fsSL https://nitpicker.dev/install | bash -s -- \
+  --org my-org \
+  --provider openai \
+  --model gpt-4.1 \
+  --region us-east-1 \
+  --stack nitpicker
 ```
+
+| Flag | Notes |
+| ---- | ----- |
+| `--org ORG` | GitHub org for the app (default: your user) |
+| `--name NAME` | GitHub App name (default: `nitpicker`) |
+| `--provider` | `anthropic` \| `openai` \| `google` |
+| `--model MODEL` | model id |
+| `--llm-key KEY` | skip the API key prompt |
+| `--region R` | AWS region (default: `us-east-1`) |
+| `--stack NAME` | CloudFormation stack (default: `nitpicker`) |
+| `--skip-deploy` | write `.env` only; run `pnpm deploy` later |
 
 Already cloned? `pnpm setup` runs the same wizard.
 
@@ -47,9 +63,11 @@ Written to `.env` by setup. Tweak anytime, then `pnpm deploy`:
 | `LLM_API_KEY` | — | provider API key |
 | `AI_PROVIDER` | `anthropic` | `anthropic` \| `openai` \| `google` |
 | `AI_MODEL` | `claude-sonnet-4-20250514` | model id |
-| `BOT_NAME` | app slug | must match `@mentions` |
+| `BOT_NAME` | `nitpicker-bot` | must match `@mentions` (set to app slug by setup) |
 | `REVIEW_ON_OPEN` | `true` | auto-review on PR open |
 | `MAX_DIFF_SIZE` | `50000` | max diff chars to the model |
+| `STACK_NAME` | `nitpicker` | CloudFormation stack name |
+| `AWS_REGION` | `us-east-1` | deploy region |
 
 ## License
 

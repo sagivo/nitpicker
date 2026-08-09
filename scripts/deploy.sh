@@ -27,6 +27,7 @@ AI_PROVIDER=$(load_env AI_PROVIDER)
 AI_MODEL=$(load_env AI_MODEL)
 BOT_NAME=$(load_env BOT_NAME)
 MAX_DIFF_SIZE=$(load_env MAX_DIFF_SIZE)
+REVIEW_ON_OPEN=$(load_env REVIEW_ON_OPEN)
 
 PRIVATE_KEY_BASE64=$(load_env PRIVATE_KEY_BASE64)
 if [[ -z "$PRIVATE_KEY_BASE64" ]]; then
@@ -36,8 +37,10 @@ if [[ -z "$PRIVATE_KEY_BASE64" ]]; then
   fi
 fi
 
-STACK_NAME="${STACK_NAME:-liblab-pr}"
-REGION="${AWS_REGION:-us-east-1}"
+STACK_NAME="${STACK_NAME:-$(load_env STACK_NAME)}"
+STACK_NAME="${STACK_NAME:-nitpicker}"
+REGION="${AWS_REGION:-$(load_env AWS_REGION)}"
+REGION="${REGION:-us-east-1}"
 
 for var in APP_ID WEBHOOK_SECRET LLM_API_KEY PRIVATE_KEY_BASE64; do
   if [[ -z "${!var}" ]]; then
@@ -66,7 +69,8 @@ sam deploy \
     "AiProvider=${AI_PROVIDER:-anthropic}" \
     "AiModel=${AI_MODEL:-claude-sonnet-4-20250514}" \
     "BotName=${BOT_NAME:-nitpicker-bot}" \
-    "MaxDiffSize=${MAX_DIFF_SIZE:-50000}"
+    "MaxDiffSize=${MAX_DIFF_SIZE:-50000}" \
+    "ReviewOnOpen=${REVIEW_ON_OPEN:-true}"
 
 echo ""
 echo "Done! Webhook URL:"

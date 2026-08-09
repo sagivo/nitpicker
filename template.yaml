@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 Transform: AWS::Serverless-2016-10-31
-Description: PR Reviewer - AI-powered GitHub PR review bot
+Description: Nitpicker - AI-powered GitHub PR review bot
 
 Globals:
   Function:
@@ -40,6 +40,10 @@ Parameters:
     Type: String
     Default: "50000"
     Description: Maximum diff size in characters before truncation
+  ReviewOnOpen:
+    Type: String
+    Default: "true"
+    Description: Auto-review on PR open/reopen/ready for review
 
 Resources:
   WebhookApi:
@@ -77,6 +81,7 @@ Resources:
           AI_MODEL: !Ref AiModel
           BOT_NAME: !Ref BotName
           MAX_DIFF_SIZE: !Ref MaxDiffSize
+          REVIEW_ON_OPEN: !Ref ReviewOnOpen
           NODE_OPTIONS: "--enable-source-maps"
     Metadata:
       BuildMethod: nodejs20.x

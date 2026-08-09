@@ -378,10 +378,17 @@ while [[ $# -gt 0 ]]; do
 nitpicker setup — interactive installer
 
   curl -fsSL https://nitpicker.dev/install | bash
+  pnpm setup
 
 Optional flags (after bash -s --):
-  --org ORG       --llm-key KEY   --provider anthropic|openai|google
-  --model MODEL   --region R      --stack NAME   --skip-deploy
+  --org ORG          GitHub org for the app (default: your user)
+  --name NAME        GitHub App name (default: nitpicker)
+  --provider NAME    anthropic | openai | google (default: anthropic)
+  --model MODEL      model id (default depends on provider)
+  --llm-key KEY      skip the API key prompt
+  --region R         AWS region (default: us-east-1)
+  --stack NAME       CloudFormation stack (default: nitpicker)
+  --skip-deploy      write .env only; run pnpm deploy later
 EOF
       exit 0
       ;;
