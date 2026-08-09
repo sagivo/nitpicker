@@ -4,3 +4,6 @@ dist/
 *.log
 .aws-sam/
 samconfig.toml
+*.db
+*.db-shm
+*.db-wal
