@@ -14,7 +14,7 @@ APP_NAME="nitpicker"
 ORG=""
 STACK_NAME="${STACK_NAME:-nitpicker}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
-AI_MODEL="${AI_MODEL:-claude-sonnet-4-20250514}"
+AI_MODEL="${AI_MODEL:-claude-sonnet-5}"
 AI_PROVIDER="${AI_PROVIDER:-anthropic}"
 BOT_NAME=""
 LLM_API_KEY="${LLM_API_KEY:-${ANTHROPIC_API_KEY:-${OPENAI_API_KEY:-${GOOGLE_GENERATIVE_AI_API_KEY:-}}}}"
@@ -255,7 +255,7 @@ default_model_for() {
   case "$1" in
     openai) echo "gpt-4.1" ;;
     google) echo "gemini-2.5-flash" ;;
-    *)      echo "claude-sonnet-4-20250514" ;;
+    *)      echo "claude-sonnet-5" ;;
   esac
 }
 
