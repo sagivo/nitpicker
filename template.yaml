@@ -30,7 +30,7 @@ Parameters:
     Description: AI provider (anthropic, openai, google)
   AiModel:
     Type: String
-    Default: claude-sonnet-4-20250514
+    Default: claude-sonnet-5
     Description: AI model to use for reviews
   BotName:
     Type: String

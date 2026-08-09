@@ -62,7 +62,7 @@ Written to `.env` by setup. Tweak anytime, then `pnpm deploy`:
 | -------- | ------- | ----- |
 | `LLM_API_KEY` | — | provider API key |
 | `AI_PROVIDER` | `anthropic` | `anthropic` \| `openai` \| `google` |
-| `AI_MODEL` | `claude-sonnet-4-20250514` | model id |
+| `AI_MODEL` | `claude-sonnet-5` | model id |
 | `BOT_NAME` | `nitpicker-bot` | must match `@mentions` (set to app slug by setup) |
 | `REVIEW_ON_OPEN` | `true` | auto-review on PR open |
 | `MAX_DIFF_SIZE` | `50000` | max diff chars to the model |

@@ -3,7 +3,7 @@ import "dotenv/config";
 export const config = {
   botName: process.env.BOT_NAME ?? "nitpicker-bot",
   aiProvider: process.env.AI_PROVIDER ?? "anthropic",
-  aiModel: process.env.AI_MODEL ?? "claude-sonnet-4-20250514",
+  aiModel: process.env.AI_MODEL ?? "claude-sonnet-5",
   llmApiKey: process.env.LLM_API_KEY,
   maxDiffSize: Number(process.env.MAX_DIFF_SIZE ?? 50_000),
   maxReviewerGuideSize: Number(process.env.MAX_REVIEWER_GUIDE_SIZE ?? 20_000),

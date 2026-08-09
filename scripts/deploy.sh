@@ -67,7 +67,7 @@ sam deploy \
     "WebhookSecret=${WEBHOOK_SECRET}" \
     "LlmApiKey=${LLM_API_KEY}" \
     "AiProvider=${AI_PROVIDER:-anthropic}" \
-    "AiModel=${AI_MODEL:-claude-sonnet-4-20250514}" \
+    "AiModel=${AI_MODEL:-claude-sonnet-5" \
     "BotName=${BOT_NAME:-nitpicker-bot}" \
     "MaxDiffSize=${MAX_DIFF_SIZE:-50000}" \
     "ReviewOnOpen=${REVIEW_ON_OPEN:-true}"
