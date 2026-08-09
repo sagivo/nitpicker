@@ -1,8 +1,21 @@
 (() => {
+  const ph = window.posthog;
+  const capture = (event, props) => {
+    try {
+      ph?.capture?.(event, props);
+    } catch {
+      /* analytics must never break the page */
+    }
+  };
+
   const repoUrl = "https://github.com/sagivo/nitpicker";
   for (const id of ["github-link", "github-cta"]) {
     const el = document.getElementById(id);
-    if (el) el.setAttribute("href", repoUrl);
+    if (!el) continue;
+    el.setAttribute("href", repoUrl);
+    el.addEventListener("click", () => {
+      capture("github_clicked", { location: id });
+    });
   }
 
   const btn = document.getElementById("copy-install");
@@ -12,6 +25,7 @@
     "curl -fsSL https://nitpicker.dev/install | bash";
 
   btn.addEventListener("click", async () => {
+    capture("install_copied");
     try {
       await navigator.clipboard.writeText(text);
       const prev = btn.textContent;
