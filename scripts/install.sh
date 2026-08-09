@@ -9,16 +9,20 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 ENV_FILE="${PROJECT_ROOT}/.env"
 PEM_FILE="${PROJECT_ROOT}/.github-app.pem"
 APP_JSON_FILE="${PROJECT_ROOT}/.github-app.json"
+EXAMPLES_ACTIONS="${PROJECT_ROOT}/examples/github-actions/nitpicker.yml"
 
 APP_NAME="nitpicker"
 ORG=""
 STACK_NAME="${STACK_NAME:-nitpicker}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
+CF_WORKER_NAME="${CF_WORKER_NAME:-nitpicker}"
 AI_MODEL="${AI_MODEL:-claude-sonnet-5}"
 AI_PROVIDER="${AI_PROVIDER:-anthropic}"
 BOT_NAME=""
 LLM_API_KEY="${LLM_API_KEY:-${ANTHROPIC_API_KEY:-${OPENAI_API_KEY:-${GOOGLE_GENERATIVE_AI_API_KEY:-}}}}"
 SKIP_DEPLOY=false
+# lambda | worker | actions  (empty = ask)
+DEPLOY_METHOD="${DEPLOY_METHOD:-}"
 
 GREEN=$'\033[0;32m'
 CYAN=$'\033[0;36m'
@@ -36,7 +40,6 @@ die()  { printf "error: %s\n" "$*" >&2; exit 1; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
 # curl|bash leaves stdin as the script pipe — prefer the real terminal.
-# -r/-w only check device-node perms; open can still fail without a TTY.
 TTY=""
 if [[ -e /dev/tty ]] && { : </dev/tty; } 2>/dev/null; then
   TTY="/dev/tty"
@@ -47,7 +50,6 @@ can_prompt() {
 }
 
 read_reply() {
-  # sets REPLY; optional -s for silent
   local silent=false
   [[ "${1:-}" == "-s" ]] && silent=true
   REPLY=""
@@ -71,7 +73,6 @@ banner() {
 
 ask() {
   local q="$1" var="$2" def="${3-}"
-  # $#>=3 means a default was supplied (may be empty, e.g. optional org)
   local has_def=false
   (( $# >= 3 )) && has_def=true
   if [[ "$has_def" == true && -n "$def" ]]; then
@@ -138,6 +139,38 @@ brew_install() {
   brew install "$1"
 }
 
+normalize_method() {
+  case "$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')" in
+    1|lambda|aws|app|app+lambda|github-app|github_app) DEPLOY_METHOD=lambda ;;
+    2|worker|workers|cloudflare|cf|cfw) DEPLOY_METHOD=worker ;;
+    3|actions|action|gha|github-actions|github_actions) DEPLOY_METHOD=actions ;;
+    *) return 1 ;;
+  esac
+}
+
+# ── method ──────────────────────────────────────────────────────────
+
+choose_method() {
+  banner "Deploy method"
+  if [[ -n "$DEPLOY_METHOD" ]]; then
+    normalize_method "$DEPLOY_METHOD" || die "unknown --method: $DEPLOY_METHOD (use lambda|worker|actions)"
+    ok "method: ${DEPLOY_METHOD}"
+    return
+  fi
+
+  say "  ${BOLD}1) AWS Lambda${RESET}          GitHub App + webhook  · multi-repo · AWS account"
+  say "  ${BOLD}2) Cloudflare Workers${RESET} GitHub App + webhook  · multi-repo · CF account"
+  say "  ${BOLD}3) GitHub Actions${RESET}     per-repo workflow     · no server  · GITHUB_TOKEN"
+  say ""
+  say "  ${DIM}App modes get a real bot identity + instant /nitpicker & @mentions.${RESET}"
+  say "  ${DIM}Actions posts as github-actions[bot]; no AWS/CF required.${RESET}"
+
+  local choice
+  ask "Choice" choice "1"
+  normalize_method "$choice" || normalize_method "1" || true
+  ok "method: ${DEPLOY_METHOD}"
+}
+
 # ── tools ───────────────────────────────────────────────────────────
 
 ensure_tools() {
@@ -162,27 +195,50 @@ ensure_tools() {
 
   if [[ "$SKIP_DEPLOY" == true ]]; then return; fi
 
-  if ! have aws; then brew_install awscli || die "install AWS CLI"; fi
-  ok "aws cli"
-
-  if ! have sam; then brew_install aws-sam-cli || die "install SAM CLI"; fi
-  ok "sam cli"
-
-  if ! aws sts get-caller-identity --region "$AWS_REGION" >/dev/null 2>&1; then
-    warn "AWS credentials missing"
-    say "  Run aws configure, then press enter…"
-    can_prompt && read_reply || true
-    if ! aws sts get-caller-identity --region "$AWS_REGION" >/dev/null 2>&1; then
-      if yes "Open AWS configure now?" y; then
-        if [[ -n "$TTY" ]]; then aws configure <"$TTY"
-        else aws configure
+  case "$DEPLOY_METHOD" in
+    lambda)
+      if ! have aws; then brew_install awscli || die "install AWS CLI"; fi
+      ok "aws cli"
+      if ! have sam; then brew_install aws-sam-cli || die "install SAM CLI"; fi
+      ok "sam cli"
+      if ! aws sts get-caller-identity --region "$AWS_REGION" >/dev/null 2>&1; then
+        warn "AWS credentials missing"
+        say "  Run aws configure, then press enter…"
+        can_prompt && read_reply || true
+        if ! aws sts get-caller-identity --region "$AWS_REGION" >/dev/null 2>&1; then
+          if yes "Open AWS configure now?" y; then
+            if [[ -n "$TTY" ]]; then aws configure <"$TTY"
+            else aws configure
+            fi
+          fi
         fi
+        aws sts get-caller-identity --region "$AWS_REGION" >/dev/null 2>&1 \
+          || die "AWS credentials required — run: aws configure"
       fi
-    fi
-    aws sts get-caller-identity --region "$AWS_REGION" >/dev/null 2>&1 \
-      || die "AWS credentials required — run: aws configure"
-  fi
-  ok "aws $(aws sts get-caller-identity --query Account --output text)"
+      ok "aws $(aws sts get-caller-identity --query Account --output text)"
+      ;;
+    worker)
+      if ! have wrangler && ! have npx; then
+        die "need wrangler or npx to deploy Workers"
+      fi
+      ok "wrangler $({ wrangler --version 2>/dev/null || npx wrangler --version 2>/dev/null || echo ready; } | head -1)"
+      if ! { wrangler whoami >/dev/null 2>&1 || npx wrangler whoami >/dev/null 2>&1; }; then
+        warn "Not logged into Cloudflare"
+        say "  Run: npx wrangler login"
+        if yes "Login now?" y; then
+          if have wrangler; then wrangler login
+          else npx wrangler login
+          fi
+        fi
+        { wrangler whoami >/dev/null 2>&1 || npx wrangler whoami >/dev/null 2>&1; } \
+          || die "Cloudflare login required — run: npx wrangler login"
+      fi
+      ok "cloudflare auth"
+      ;;
+    actions)
+      ok "no cloud deploy tools needed"
+      ;;
+  esac
 }
 
 # ── github app ──────────────────────────────────────────────────────
@@ -239,6 +295,18 @@ reuse_github_app() {
   materialize_pem
   APP_SLUG="$BOT_NAME"
   ok "reusing app ${BOT_NAME} (id ${APP_ID})"
+}
+
+setup_github_app() {
+  if [[ -f "$ENV_FILE" && -n "$(load_env APP_ID)" ]]; then
+    banner "GitHub App"
+    if yes "Reuse existing app id $(load_env APP_ID)?" y; then
+      reuse_github_app
+      return
+    fi
+  fi
+  create_github_app
+  [[ -n "$BOT_NAME" ]] || BOT_NAME="${APP_SLUG:-$APP_NAME}"
 }
 
 # ── llm ─────────────────────────────────────────────────────────────
@@ -298,29 +366,42 @@ collect_llm() {
 
 write_env() {
   umask 077
-  cat > "$ENV_FILE" <<EOF
-# Generated by nitpicker setup ($(date -u +%Y-%m-%dT%H:%M:%SZ))
-
-APP_ID=${APP_ID}
-WEBHOOK_SECRET=${WEBHOOK_SECRET}
-PRIVATE_KEY_BASE64=${PRIVATE_KEY_BASE64}
-
-LLM_API_KEY=${LLM_API_KEY}
-AI_PROVIDER=${AI_PROVIDER}
-AI_MODEL=${AI_MODEL}
-BOT_NAME=${BOT_NAME}
-
-MAX_DIFF_SIZE=50000
-REVIEW_ON_OPEN=true
-
-STACK_NAME=${STACK_NAME}
-AWS_REGION=${AWS_REGION}
-EOF
+  {
+    echo "# Generated by nitpicker setup ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+    echo "DEPLOY_METHOD=${DEPLOY_METHOD}"
+    echo ""
+    if [[ "$DEPLOY_METHOD" != "actions" ]]; then
+      echo "APP_ID=${APP_ID}"
+      echo "WEBHOOK_SECRET=${WEBHOOK_SECRET}"
+      echo "PRIVATE_KEY_BASE64=${PRIVATE_KEY_BASE64}"
+      echo ""
+    fi
+    echo "LLM_API_KEY=${LLM_API_KEY}"
+    echo "AI_PROVIDER=${AI_PROVIDER}"
+    echo "AI_MODEL=${AI_MODEL}"
+    echo "BOT_NAME=${BOT_NAME}"
+    echo ""
+    echo "MAX_DIFF_SIZE=50000"
+    echo "REVIEW_ON_OPEN=true"
+    echo ""
+    case "$DEPLOY_METHOD" in
+      lambda)
+        echo "STACK_NAME=${STACK_NAME}"
+        echo "AWS_REGION=${AWS_REGION}"
+        ;;
+      worker)
+        echo "CF_WORKER_NAME=${CF_WORKER_NAME}"
+        ;;
+      actions)
+        echo "# Add LLM_API_KEY as a GitHub Actions secret in each repo"
+        ;;
+    esac
+  } > "$ENV_FILE"
   ok "wrote .env"
 }
 
-deploy_stack() {
-  banner "Deploy to AWS"
+deploy_lambda() {
+  banner "Deploy to AWS Lambda"
   ask "AWS region" AWS_REGION "$AWS_REGION"
   ask "Stack name" STACK_NAME "$STACK_NAME"
 
@@ -345,6 +426,97 @@ deploy_stack() {
     ok "webhook set"
   else
     warn "set webhook manually to: $WEBHOOK_URL"
+  fi
+}
+
+deploy_worker() {
+  banner "Deploy to Cloudflare Workers"
+  ask "Worker name" CF_WORKER_NAME "$CF_WORKER_NAME"
+
+  info "deploying worker + secrets…"
+  export CF_WORKER_NAME
+  # ensure .env has latest worker name before deploy script reads it
+  if grep -q '^CF_WORKER_NAME=' "$ENV_FILE" 2>/dev/null; then
+    tmp="$(mktemp)"
+    sed "s/^CF_WORKER_NAME=.*/CF_WORKER_NAME=${CF_WORKER_NAME}/" "$ENV_FILE" >"$tmp"
+    mv "$tmp" "$ENV_FILE"
+  else
+    printf '\nCF_WORKER_NAME=%s\n' "$CF_WORKER_NAME" >>"$ENV_FILE"
+  fi
+
+  DEPLOY_OUT="$(cd "$PROJECT_ROOT" && bash "$SCRIPT_DIR/deploy-worker.sh")" || {
+    printf '%s\n' "$DEPLOY_OUT"
+    die "worker deploy failed"
+  }
+  printf '%s\n' "$DEPLOY_OUT"
+
+  WEBHOOK_URL="$(
+    printf '%s\n' "$DEPLOY_OUT" | grep -Eo 'https://[a-zA-Z0-9._/-]+\.workers\.dev' | head -1 || true
+  )"
+  if [[ -n "$WEBHOOK_URL" ]]; then
+    ok "$WEBHOOK_URL"
+    info "wiring GitHub webhook…"
+    if node "$SCRIPT_DIR/update-webhook.mjs" \
+        --app-id "$APP_ID" --pem-file "$PEM_FILE" \
+        --url "$WEBHOOK_URL" --secret "$WEBHOOK_SECRET" >/dev/null; then
+      ok "webhook set"
+    else
+      warn "set webhook manually to: $WEBHOOK_URL"
+    fi
+  else
+    warn "could not parse workers.dev URL — set the GitHub App webhook manually"
+  fi
+}
+
+setup_actions() {
+  banner "GitHub Actions setup"
+  BOT_NAME="${BOT_NAME:-github-actions}"
+
+  say "  Add this workflow to each repo (or org reusable workflow):"
+  say "  ${DIM}.github/workflows/nitpicker.yml${RESET}"
+  say ""
+  if [[ -f "$EXAMPLES_ACTIONS" ]]; then
+    say "  Template:"
+    say "  ${DIM}${EXAMPLES_ACTIONS}${RESET}"
+  fi
+  say ""
+  say "  Repo secrets / variables:"
+  say "    ${BOLD}LLM_API_KEY${RESET}     (secret, required)"
+  say "    AI_PROVIDER    (variable, default anthropic)"
+  say "    AI_MODEL       (variable, default ${AI_MODEL})"
+  say "    BOT_NAME       (variable, default github-actions)"
+  say ""
+  say "  Minimal workflow:"
+  cat <<'YAML'
+  name: Nitpicker
+  on:
+    pull_request:
+      types: [opened, reopened, ready_for_review]
+    issue_comment:
+      types: [created]
+    pull_request_review_comment:
+      types: [created]
+  permissions:
+    contents: read
+    pull-requests: write
+    issues: write
+  jobs:
+    review:
+      runs-on: ubuntu-latest
+      steps:
+        - uses: sagivo/nitpicker@main
+          with:
+            llm-api-key: ${{ secrets.LLM_API_KEY }}
+YAML
+  say ""
+  say "  Then open a PR — or comment ${BOLD}/nitpicker${RESET}."
+  say "  Q&A: ${BOLD}@github-actions why…${RESET} (or set BOT_NAME + a PAT for a custom identity)."
+
+  if can_prompt && yes "Copy workflow template path to clipboard?" n; then
+    if have pbcopy; then printf '%s' "$EXAMPLES_ACTIONS" | pbcopy && ok "copied path"
+    elif have xclip; then printf '%s' "$EXAMPLES_ACTIONS" | xclip -selection clipboard && ok "copied path"
+    else warn "no clipboard tool found"
+    fi
   fi
 }
 
@@ -373,9 +545,11 @@ while [[ $# -gt 0 ]]; do
     --name) APP_NAME="$2"; shift 2 ;;
     --stack) STACK_NAME="$2"; shift 2 ;;
     --region) AWS_REGION="$2"; shift 2 ;;
+    --worker-name) CF_WORKER_NAME="$2"; shift 2 ;;
     --model) AI_MODEL="$2"; AI_MODEL_SET=1; shift 2 ;;
     --provider) AI_PROVIDER="$2"; shift 2 ;;
     --llm-key) LLM_API_KEY="$2"; shift 2 ;;
+    --method) DEPLOY_METHOD="$2"; shift 2 ;;
     --skip-deploy) SKIP_DEPLOY=true; shift ;;
     -h|--help)
       cat <<EOF
@@ -385,14 +559,21 @@ nitpicker setup — interactive installer
   pnpm setup
 
 Optional flags (after bash -s --):
+  --method NAME      lambda | worker | actions
   --org ORG          GitHub org for the app (default: your user)
   --name NAME        GitHub App name (default: nitpicker)
   --provider NAME    anthropic | openai | google (default: anthropic)
   --model MODEL      model id (default depends on provider)
   --llm-key KEY      skip the API key prompt
-  --region R         AWS region (default: us-east-1)
+  --region R         AWS region for lambda (default: us-east-1)
   --stack NAME       CloudFormation stack (default: nitpicker)
-  --skip-deploy      write .env only; run pnpm deploy later
+  --worker-name N    Cloudflare Worker name (default: nitpicker)
+  --skip-deploy      write .env only; deploy later
+
+Methods:
+  lambda    GitHub App + AWS Lambda webhook (multi-repo bot)
+  worker    GitHub App + Cloudflare Workers webhook (multi-repo bot)
+  actions   GitHub Actions workflow per repo (no always-on server)
 EOF
       exit 0
       ;;
@@ -403,19 +584,19 @@ done
 printf "\n%s nitpicker setup %s\n" "$BOLD" "$RESET"
 say "${DIM}I'll ask only for what I can't figure out.${RESET}"
 
+choose_method
 ensure_tools
 
-if [[ -f "$ENV_FILE" && -n "$(load_env APP_ID)" ]]; then
-  banner "GitHub App"
-  if yes "Reuse existing app id $(load_env APP_ID)?" y; then
-    reuse_github_app
-  else
-    create_github_app
-  fi
-else
-  create_github_app
-fi
-[[ -n "$BOT_NAME" ]] || BOT_NAME="${APP_SLUG:-$APP_NAME}"
+case "$DEPLOY_METHOD" in
+  lambda|worker)
+    setup_github_app
+    [[ -n "$BOT_NAME" ]] || BOT_NAME="${APP_SLUG:-$APP_NAME}"
+    ;;
+  actions)
+    BOT_NAME="${BOT_NAME:-github-actions}"
+    APP_ID=""; WEBHOOK_SECRET=""; PRIVATE_KEY_BASE64=""; APP_SLUG=""
+    ;;
+esac
 
 collect_llm
 write_env
@@ -426,18 +607,32 @@ ok "pnpm install"
 
 WEBHOOK_URL=""
 if [[ "$SKIP_DEPLOY" == true ]]; then
-  warn "skipped deploy — run pnpm deploy later"
+  warn "skipped deploy — finish setup manually (see README)"
 else
-  deploy_stack
+  case "$DEPLOY_METHOD" in
+    lambda)  deploy_lambda ;;
+    worker)  deploy_worker ;;
+    actions) setup_actions ;;
+  esac
 fi
 
-install_on_repos
+if [[ "$DEPLOY_METHOD" == "lambda" || "$DEPLOY_METHOD" == "worker" ]]; then
+  install_on_repos
+fi
 
 printf "\n%s%s ready.%s\n" "$BOLD" "$GREEN" "$RESET"
+say "  method:  ${DEPLOY_METHOD}"
 say "  bot:     @${BOT_NAME}"
 say "  model:   ${AI_PROVIDER} / ${AI_MODEL}"
 [[ -n "$WEBHOOK_URL" ]] && say "  webhook: ${WEBHOOK_URL}"
 say "  home:    ${PROJECT_ROOT}"
 say ""
-say "  Open a PR — or comment ${BOLD}/nitpicker${RESET} on one."
+case "$DEPLOY_METHOD" in
+  actions)
+    say "  Add the workflow + LLM_API_KEY secret, then open a PR."
+    ;;
+  *)
+    say "  Open a PR — or comment ${BOLD}/nitpicker${RESET} on one."
+    ;;
+esac
 say ""

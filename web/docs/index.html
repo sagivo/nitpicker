@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Docs — Nitpicker | Open-source AI PR reviewer</title>
+  <meta name="description" content="Nitpicker docs: install, deploy, and configure the open-source AI PR reviewer. Compare vs CodeRabbit, Greptile, Graphite Diamond, Qodo, and GitHub Copilot code review — self-hosted, diff-only, bring your own model." />
+  <meta name="keywords" content="AI PR reviewer, AI code review, open source AI code review, CodeRabbit alternative, Greptile alternative, self-hosted PR review, GitHub pull request AI, diff-only code review, bring your own LLM" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,600&display=swap" rel="stylesheet" />
+  <link rel="icon" href="../assets/nit-avatar.png" />
+  <link rel="stylesheet" href="../styles.css" />
+  <script>
+    !function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group reset setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags resetGroups setDisplayName captureException identifySentry get_distinct_id getGroups get_session_id get_session_replay_url alias set_config startSessionRecording stopSessionRecording sessionRecordingStarted captureTraceFeedback captureTraceMetric".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+    posthog.init("phc_AAby8KpbpxfwCczPQQkQmAP2zxBFFHrCayWmwiWeWX9H", {
+      api_host: "https://us.i.posthog.com",
+      person_profiles: "identified_only",
+      capture_pageview: true,
+      capture_pageleave: true,
+    });
+  </script>
+</head>
+<body class="docs-page">
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="top">
+    <a class="brand" href="../">
+      <img src="../assets/nit-avatar.png" width="28" height="28" alt="" />
+      <span>nitpicker</span>
+    </a>
+    <nav>
+      <a href="#install">Install</a>
+      <a href="#deploy">Deploy</a>
+      <a href="#config">Config</a>
+      <a href="#customize">Customize</a>
+      <a href="#compare">Compare</a>
+      <a class="primary" id="github-link" href="https://github.com/sagivo/nitpicker">Star on GitHub</a>
+    </nav>
+  </header>
+
+  <div class="docs-layout">
+    <aside class="docs-toc" aria-label="On this page">
+      <p class="toc-label">On this page</p>
+      <nav>
+        <a href="#overview">Overview</a>
+        <a href="#install">Install</a>
+        <a href="#deploy">Deploy methods</a>
+        <a href="#deploy-lambda">↳ AWS Lambda</a>
+        <a href="#deploy-worker">↳ Cloudflare Workers</a>
+        <a href="#deploy-actions">↳ GitHub Actions</a>
+        <a href="#config">Config reference</a>
+        <a href="#ai-config">↳ AI & behavior</a>
+        <a href="#github-app-config">↳ GitHub App</a>
+        <a href="#deploy-config">↳ Deploy vars</a>
+        <a href="#action-inputs">↳ Action inputs</a>
+        <a href="#customize">Customize reviews</a>
+        <a href="#your-rules">↳ Your own rules</a>
+        <a href="#system-prompt">↳ System prompt</a>
+        <a href="#usage">Usage</a>
+        <a href="#local-dev">Local dev</a>
+        <a href="#installer-flags">Installer flags</a>
+        <a href="#compare">How it compares</a>
+        <a href="#vs-coderabbit">↳ vs CodeRabbit</a>
+        <a href="#vs-greptile">↳ vs Greptile</a>
+        <a href="#vs-graphite">↳ vs Graphite</a>
+        <a href="#vs-qodo">↳ vs Qodo</a>
+        <a href="#vs-copilot">↳ vs Copilot</a>
+      </nav>
+    </aside>
+
+    <main id="main" class="docs">
+      <header class="docs-hero">
+        <p class="eyebrow"><span class="dot"></span> docs · no pep talks, only options</p>
+        <h1>Configure it. Deploy it.<br /><em>Then regret the PR.</em></h1>
+        <p class="lede">
+          Everything you need to install Nitpicker, pick a runtime, tune the model,
+          and teach Nit your house rules via <code>REVIEWER.md</code> and Copilot instruction files.
+        </p>
+      </header>
+
+      <section id="overview" class="docs-section">
+        <h2>Overview</h2>
+        <p>
+          Nitpicker is an open-source AI PR reviewer. It reads the <strong>diff only</strong>
+          (plus optional repo guides), then posts inline comments and a short summary.
+        </p>
+        <ul class="feature-list">
+          <li><strong>Auto-review</strong> on PR open, reopen, and ready for review</li>
+          <li><strong>On demand</strong> via a <code>/nitpicker</code> comment</li>
+          <li><strong>Q&amp;A</strong> when you mention the bot on a PR</li>
+          <li><strong>Thread replies</strong> when you mention the bot on a review comment</li>
+        </ul>
+        <p>
+          Three deploy modes share the same review engine:
+          <a href="#deploy-lambda">AWS Lambda</a>,
+          <a href="#deploy-worker">Cloudflare Workers</a>, and
+          <a href="#deploy-actions">GitHub Actions</a>.
+        </p>
+      </section>
+
+      <section id="install" class="docs-section">
+        <h2>Install</h2>
+        <p>Fastest path — one command, short wizard:</p>
+        <div class="install" id="install-box">
+          <div class="diff-bar">
+            <span class="file">one line install</span>
+            <button type="button" class="copy-btn" id="copy-install" data-copy="curl -fsSL https://nitpicker.dev/install | bash" aria-label="Copy install command">copy</button>
+          </div>
+          <pre id="install-cmd"><code>curl -fsSL https://nitpicker.dev/install | bash</code></pre>
+        </div>
+        <p>The installer clones into <code>~/nitpicker</code> (override with <code>NITPICKER_HOME</code>), then:</p>
+        <ol>
+          <li>Asks for a deploy method (Lambda, Workers, or Actions)</li>
+          <li>Installs missing tools when it can</li>
+          <li>Creates the GitHub App when needed (browser flow)</li>
+          <li>Asks for your LLM API key</li>
+          <li>Deploys or prints workflow setup</li>
+          <li>Opens the app install page (App modes)</li>
+        </ol>
+        <p>Already cloned? Run the same wizard from the repo:</p>
+        <div class="code-block">
+          <div class="diff-bar"><span class="file">shell</span></div>
+          <pre><code>pnpm setup
+# same flags as the curl installer, e.g.
+pnpm setup -- --method worker --provider openai</code></pre>
+        </div>
+      </section>
+
+      <section id="deploy" class="docs-section">
+        <h2>Deploy methods</h2>
+        <p>Pick based on how many repos you want and whether you want a real bot user.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Method</th>
+                <th>Flag</th>
+                <th>Needs</th>
+                <th>Best for</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><a href="#deploy-lambda">AWS Lambda</a></td>
+                <td><code>lambda</code></td>
+                <td>AWS account + GitHub App</td>
+                <td>Multi-repo bot, instant webhooks</td>
+              </tr>
+              <tr>
+                <td><a href="#deploy-worker">Cloudflare Workers</a></td>
+                <td><code>worker</code></td>
+                <td>CF account + GitHub App</td>
+                <td>Multi-repo bot, no AWS</td>
+              </tr>
+              <tr>
+                <td><a href="#deploy-actions">GitHub Actions</a></td>
+                <td><code>actions</code></td>
+                <td>Repo workflow + <code>LLM_API_KEY</code></td>
+                <td>No always-on server; per-repo</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <p><strong>App modes</strong> (Lambda / Workers): real bot user, multi-repo install, <code>/nitpicker</code> + <code>@bot</code> Q&amp;A.</p>
+          <p><strong>Actions mode:</strong> posts as <code>github-actions[bot]</code> unless you pass a PAT. Q&amp;A via <code>@github-actions …</code>.</p>
+        </div>
+
+        <h3 id="deploy-lambda">AWS Lambda</h3>
+        <p>
+          Packages the webhook handler as a Node 20 Lambda behind HTTP API Gateway
+          (see <code>template.yaml</code>). Idle cost is effectively zero.
+        </p>
+        <div class="code-block">
+          <div class="diff-bar"><span class="file">.env essentials</span></div>
+          <pre><code>DEPLOY_METHOD=lambda
+APP_ID=…
+WEBHOOK_SECRET=…
+PRIVATE_KEY_BASE64=…   # preferred over multiline PRIVATE_KEY
+LLM_API_KEY=…
+AI_PROVIDER=anthropic
+AI_MODEL=claude-sonnet-5
+BOT_NAME=nitpicker-bot
+STACK_NAME=nitpicker
+AWS_REGION=us-east-1</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="diff-bar"><span class="file">deploy</span></div>
+          <pre><code>pnpm deploy
+# prints WebhookUrl — set that as the GitHub App webhook endpoint
+# (the installer usually wires this for you)</code></pre>
+        </div>
+        <ul>
+          <li>Requires AWS credentials with rights to deploy CloudFormation / SAM.</li>
+          <li>Function timeout 300s, 512 MB, arm64.</li>
+          <li>After config changes in <code>.env</code>, run <code>pnpm deploy</code> again.</li>
+        </ul>
+
+        <h3 id="deploy-worker">Cloudflare Workers</h3>
+        <p>
+          Same Probot webhook app on Workers (<code>src/worker.ts</code> + <code>wrangler.toml</code>).
+          Secrets go through Wrangler; non-secrets live in <code>[vars]</code>.
+        </p>
+        <div class="code-block">
+          <div class="diff-bar"><span class="file">.env essentials</span></div>
+          <pre><code>DEPLOY_METHOD=worker
+APP_ID=…
+WEBHOOK_SECRET=…
+PRIVATE_KEY_BASE64=…
+LLM_API_KEY=…
+CF_WORKER_NAME=nitpicker</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="diff-bar"><span class="file">deploy</span></div>
+          <pre><code>pnpm deploy:worker
+# secrets set automatically from .env:
+#   APP_ID, PRIVATE_KEY_BASE64, WEBHOOK_SECRET, LLM_API_KEY</code></pre>
+        </div>
+        <p>Manual secret updates anytime:</p>
+        <div class="code-block">
+          <div class="diff-bar"><span class="file">shell</span></div>
+          <pre><code>npx wrangler secret put LLM_API_KEY
+npx wrangler secret put APP_ID
+npx wrangler secret put PRIVATE_KEY_BASE64
+npx wrangler secret put WEBHOOK_SECRET</code></pre>
+        </div>
+        <p>
+          Non-secret defaults in <code>wrangler.toml</code>:
+          <code>AI_PROVIDER</code>, <code>AI_MODEL</code>, <code>BOT_NAME</code>,
+          <code>MAX_DIFF_SIZE</code>, <code>REVIEW_ON_OPEN</code>.
+          Edit the file or override via the Cloudflare dashboard, then redeploy.
+        </p>
+
+        <h3 id="deploy-actions">GitHub Actions</h3>
+        <p>
+          No webhook server. The composite action (<code>action.yml</code>) runs on PR and comment events
+          and posts as <code>github-actions[bot]</code> by default.
+        </p>
+        <ol>
+          <li>Copy <code>examples/github-actions/nitpicker.yml</code> to <code>.github/workflows/nitpicker.yml</code>.</li>
+          <li>Add repository (or org) secret <code>LLM_API_KEY</code>.</li>
+          <li>Optional repo <strong>variables</strong>: <code>AI_PROVIDER</code>, <code>AI_MODEL</code>, <code>BOT_NAME</code>, <code>REVIEW_ON_OPEN</code>.</li>
+        </ol>
+        <div class="code-block">
+          <div class="diff-bar"><span class="file">.github/workflows/nitpicker.yml</span></div>
+          <pre><code>name: Nitpicker
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+  issue_comment:
+    types: [created]
+  pull_request_review_comment:
+    types: [created]
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: sagivo/nitpicker@main
+        with:
+          llm-api-key: ${{ secrets.LLM_API_KEY }}
+          ai-provider: anthropic
+          ai-model: claude-sonnet-5
+          bot-name: github-actions
+          review-on-open: "true"</code></pre>
+        </div>
+        <div class="callout">
+          <p>
+            To post as a different user (or to hit private resources), pass
+            <code>github-token</code> with a PAT that has <code>pull-requests: write</code>
+            and set <code>bot-name</code> to that account’s login (no <code>[bot]</code> suffix).
+          </p>
+        </div>
+      </section>
+
+      <section id="config" class="docs-section">
+        <h2>Config reference</h2>
+        <p>
+          Runtime config is environment variables (written to <code>.env</code> by setup).
+          App modes load them at deploy time; Actions maps workflow inputs onto the same names.
+        </p>
+
+        <h3 id="ai-config">AI &amp; behavior</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Variable</th>
+                <th>Default</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>LLM_API_KEY</code></td>
+                <td>—</td>
+                <td>Provider API key. <strong>Required.</strong></td>
+              </tr>
+              <tr>
+                <td><code>AI_PROVIDER</code></td>
+                <td><code>anthropic</code></td>
+                <td><code>anthropic</code> · <code>openai</code> · <code>google</code></td>
+              </tr>
+              <tr>
+                <td><code>AI_MODEL</code></td>
+                <td><code>claude-sonnet-5</code></td>
+                <td>Any model id your provider accepts. See defaults below.</td>
+              </tr>
+              <tr>
+                <td><code>BOT_NAME</code></td>
+                <td><code>nitpicker-bot</code></td>
+                <td>Login without <code>[bot]</code>. Must match <code>@mentions</code>. Use <code>github-actions</code> in Actions mode.</td>
+              </tr>
+              <tr>
+                <td><code>REVIEW_ON_OPEN</code></td>
+                <td><code>true</code></td>
+                <td>Auto-review on open / reopen / ready for review. Set <code>false</code> to require <code>/nitpicker</code> only. Drafts are always skipped.</td>
+              </tr>
+              <tr>
+                <td><code>MAX_DIFF_SIZE</code></td>
+                <td><code>50000</code></td>
+                <td>Max diff characters sent to the model (truncated past this).</td>
+              </tr>
+              <tr>
+                <td><code>MAX_REVIEWER_GUIDE_SIZE</code></td>
+                <td><code>20000</code></td>
+                <td>Max chars loaded from <code>REVIEWER.md</code>.</td>
+              </tr>
+              <tr>
+                <td><code>MAX_COPILOT_INSTRUCTIONS_SIZE</code></td>
+                <td><code>20000</code></td>
+                <td>Max chars for <code>.github/copilot-instructions.md</code> and aggregate path instructions.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>Default models when you omit <code>AI_MODEL</code> / <code>--model</code>:</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Provider</th>
+                <th>Default model</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>anthropic</code></td>
+                <td><code>claude-sonnet-5</code></td>
+              </tr>
+              <tr>
+                <td><code>openai</code></td>
+                <td><code>gpt-4.1</code></td>
+              </tr>
+              <tr>
+                <td><code>google</code></td>
+                <td><code>gemini-2.5-flash</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="github-app-config">GitHub App (Lambda / Workers)</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Variable</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>APP_ID</code></td>
+                <td>GitHub App ID from the app settings page.</td>
+              </tr>
+              <tr>
+                <td><code>WEBHOOK_SECRET</code></td>
+                <td>HMAC secret used to verify webhook payloads.</td>
+              </tr>
+              <tr>
+                <td><code>PRIVATE_KEY_BASE64</code></td>
+                <td>App private key, base64-encoded PEM. Preferred — avoids multiline env pain. <code>cat key.pem | base64</code></td>
+              </tr>
+              <tr>
+                <td><code>PRIVATE_KEY</code></td>
+                <td>Raw PEM. Used only if <code>PRIVATE_KEY_BASE64</code> is unset (deploy scripts will base64 it).</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          The installer creates the app with the webhook permissions Nit needs
+          (PR read/write, issue comments, contents read). Install the app on the
+          orgs/repos you want reviewed.
+        </p>
+
+        <h3 id="deploy-config">Deploy variables</h3>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Variable</th>
+                <th>Default</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>DEPLOY_METHOD</code></td>
+                <td>—</td>
+                <td><code>lambda</code> · <code>worker</code> · <code>actions</code></td>
+              </tr>
+              <tr>
+                <td><code>STACK_NAME</code></td>
+                <td><code>nitpicker</code></td>
+                <td>CloudFormation stack name (Lambda).</td>
+              </tr>
+              <tr>
+                <td><code>AWS_REGION</code></td>
+                <td><code>us-east-1</code></td>
+                <td>Lambda deploy region.</td>
+              </tr>
+              <tr>
+                <td><code>CF_WORKER_NAME</code></td>
+                <td><code>nitpicker</code></td>
+                <td>Cloudflare Worker name (updates <code>wrangler.toml</code> name).</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3 id="action-inputs">GitHub Action inputs</h3>
+        <p>Mapped 1:1 onto the env vars above when using <code>uses: sagivo/nitpicker@…</code>.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Input</th>
+                <th>Default</th>
+                <th>Env equivalent</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>llm-api-key</code></td>
+                <td>—</td>
+                <td><code>LLM_API_KEY</code> (required)</td>
+              </tr>
+              <tr>
+                <td><code>ai-provider</code></td>
+                <td><code>anthropic</code></td>
+                <td><code>AI_PROVIDER</code></td>
+              </tr>
+              <tr>
+                <td><code>ai-model</code></td>
+                <td><code>claude-sonnet-5</code></td>
+                <td><code>AI_MODEL</code></td>
+              </tr>
+              <tr>
+                <td><code>bot-name</code></td>
+                <td><code>github-actions</code></td>
+                <td><code>BOT_NAME</code></td>
+              </tr>
+              <tr>
+                <td><code>review-on-open</code></td>
+                <td><code>true</code></td>
+                <td><code>REVIEW_ON_OPEN</code></td>
+              </tr>
+              <tr>
+                <td><code>max-diff-size</code></td>
+                <td><code>50000</code></td>
+                <td><code>MAX_DIFF_SIZE</code></td>
+              </tr>
+              <tr>
+                <td><code>github-token</code></td>
+                <td><code>${{ github.token }}</code></td>
+                <td><code>GITHUB_TOKEN</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="customize" class="docs-section">
+        <h2>Customize reviews</h2>
+        <p>
+          Two layers. Most teams only need the first:
+        </p>
+        <ol>
+          <li><a href="#your-rules"><strong>Your own rules</strong></a> — guide files on each repo’s default branch. No fork, no redeploy.</li>
+          <li><a href="#system-prompt"><strong>System prompt</strong></a> — edit the built-in persona / JSON contract in the Nitpicker source, then redeploy (or point Actions at your fork).</li>
+        </ol>
+
+        <h3 id="your-rules">Give Nit your own rules</h3>
+        <p>
+          Drop guide files on the <strong>default branch</strong> of each repo you install the bot on.
+          Nit fetches them on every review and injects them into the user prompt (below the diff).
+          Use this for house style, severity, domain checks, and “never do X.”
+        </p>
+
+        <h4>Precedence</h4>
+        <p>When sources conflict, highest wins:</p>
+        <ol>
+          <li>Path-specific instructions (<code>.github/instructions/*.instructions.md</code>)</li>
+          <li>Copilot instructions (<code>.github/copilot-instructions.md</code>)</li>
+          <li>Reviewer guide (<code>REVIEWER.md</code>)</li>
+          <li>Built-in system prompt defaults</li>
+        </ol>
+        <div class="callout">
+          <p>
+            Guide files are treated as <strong>reference data</strong>, not a jailbreak.
+            The system prompt still owns output format (JSON review shape, suggestion blocks, diff-only comments).
+            Put product rules in the guides; put persona / contract changes in the system prompt.
+          </p>
+        </div>
+
+        <h3 id="reviewer-md"><code>REVIEWER.md</code></h3>
+        <p>
+          Repo root. Project-specific checklist: severity levels, security rules,
+          domain must-haves. Treated as an authoritative guide on top of general review.
+        </p>
+        <div class="code-block">
+          <div class="diff-bar"><span class="file">REVIEWER.md</span></div>
+          <pre><code># Review standards
+
+## Critical
+- Never log secrets, tokens, or full auth headers
+- All public API handlers must validate auth before side effects
+- Payments: no empty catch around charge / refund paths
+
+## Warning
+- New DB queries in request paths need an index plan
+- Avoid `any` in new TypeScript without a one-line justification
+
+## Style
+- Prefer early returns over deep nesting
+- Tests that only assert `true` are not tests</code></pre>
+        </div>
+        <p>Truncated at <code>MAX_REVIEWER_GUIDE_SIZE</code> (default 20k chars).</p>
+
+        <h3 id="copilot-instructions"><code>.github/copilot-instructions.md</code></h3>
+        <p>
+          Repo-wide conventions and architecture notes (same file many Copilot setups already use).
+          Nit uses it as context for “how code should look here,” on reviews and Q&amp;A.
+        </p>
+        <div class="code-block">
+          <div class="diff-bar"><span class="file">.github/copilot-instructions.md</span></div>
+          <pre><code># Project conventions
+
+- Node 20, ESM only, no default exports in `src/`
+- API errors: throw `AppError`; never raw strings
+- React Query for server state; no ad-hoc fetch in components
+- Name booleans `is*` / `has*`; no `flag` / `data2`</code></pre>
+        </div>
+
+        <h3 id="path-instructions">Path-specific instructions</h3>
+        <p>
+          Files under <code>.github/instructions/</code> ending in <code>.instructions.md</code>,
+          with YAML frontmatter <code>applyTo</code> (glob). Nested one level is supported
+          (up to 5 subdirs, 15 files total). Aggregate size shares
+          <code>MAX_COPILOT_INSTRUCTIONS_SIZE</code>.
+        </p>
+        <div class="code-block">
+          <div class="diff-bar"><span class="file">.github/instructions/api.instructions.md</span></div>
+          <pre><code>---
+applyTo: "src/api/**/*.ts"
+---
+
+- Every route exports `methods` and a zod `input` schema
+- No direct Prisma calls — use the service layer
+- Return `json(data, status)` helpers only</code></pre>
+        </div>
+        <div class="code-block">
+          <div class="diff-bar"><span class="file">.github/instructions/tests.instructions.md</span></div>
+          <pre><code>---
+applyTo: "**/*.{test,spec}.ts"
+---
+
+- Prefer `vi.mocked()` over manual casts
+- No snapshot tests for error messages
+- Integration tests go in `tests/integration/`</code></pre>
+        </div>
+
+        <h3>What Nit looks for by default</h3>
+        <p>Even without guide files, reviews focus on:</p>
+        <ul>
+          <li>Bugs and logic errors on changed lines</li>
+          <li>Security issues</li>
+          <li>Performance footguns</li>
+          <li>Readability / naming</li>
+        </ul>
+        <p>
+          Comments are severity-tagged (<code>critical</code> · <code>warning</code> · <code>suggestion</code>)
+          and may include GitHub <code>suggestion</code> blocks you can apply in one click.
+          Clean diffs get a short “looks good” review — no filler praise.
+        </p>
+
+        <h3>Tuning behavior without code changes</h3>
+        <ul>
+          <li><strong>Quieter bot:</strong> <code>REVIEW_ON_OPEN=false</code> and only run <code>/nitpicker</code> when you want it.</li>
+          <li><strong>Cheaper / faster:</strong> smaller model (<code>gemini-2.5-flash</code>, etc.) and lower <code>MAX_DIFF_SIZE</code>.</li>
+          <li><strong>Stricter house rules:</strong> put non-negotiables in <code>REVIEWER.md</code> under Critical.</li>
+          <li><strong>Different personality per area:</strong> path instructions for <code>src/payments/**</code> vs UI.</li>
+        </ul>
+
+        <h3 id="system-prompt">Update the system prompt</h3>
+        <p>
+          The model always gets a <strong>system</strong> message (persona + output contract) and a
+          <strong>user</strong> message (PR title, description, annotated diff, plus any guide files above).
+          Guides cannot replace the system prompt. To change tone, focus areas, or the JSON schema the bot must return, edit the source prompts.
+        </p>
+
+        <h4>Where the prompts live</h4>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>File</th>
+                <th>Export</th>
+                <th>Used for</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>src/prompts/review.ts</code></td>
+                <td><code>REVIEW_SYSTEM_PROMPT</code></td>
+                <td>Full PR reviews (auto + <code>/nitpicker</code>)</td>
+              </tr>
+              <tr>
+                <td><code>src/prompts/review.ts</code></td>
+                <td><code>buildReviewPrompt()</code></td>
+                <td>User message: diff, file list, guide sections</td>
+              </tr>
+              <tr>
+                <td><code>src/prompts/question.ts</code></td>
+                <td><code>QUESTION_SYSTEM_PROMPT</code></td>
+                <td>PR comment Q&amp;A (<code>@bot …</code>)</td>
+              </tr>
+              <tr>
+                <td><code>src/prompts/question.ts</code></td>
+                <td><code>THREAD_SYSTEM_PROMPT</code></td>
+                <td>Inline review-thread replies</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          Wiring is in <code>src/services/ai.ts</code> — <code>reviewPR</code> / <code>answerQuestion</code> pass
+          these strings to the Vercel AI SDK as <code>system</code> + <code>prompt</code>.
+        </p>
+
+        <h4>Edit the review system prompt</h4>
+        <ol>
+          <li>Clone or open your Nitpicker install (default <code>~/nitpicker</code>), or fork <code>sagivo/nitpicker</code>.</li>
+          <li>Open <code>src/prompts/review.ts</code> and change <code>REVIEW_SYSTEM_PROMPT</code>.</li>
+          <li>Redeploy (App modes) or point Actions at your fork/ref (Actions mode).</li>
+        </ol>
+        <div class="code-block">
+          <div class="diff-bar"><span class="file">src/prompts/review.ts</span></div>
+          <pre><code>export const REVIEW_SYSTEM_PROMPT = `You are a senior software engineer reviewing a GitHub pull request.
+
+// Personality &amp; focus — safe to rewrite
+Review the diff for bugs, security issues, performance problems, and readability.
+Only comment on lines in the diff. Be concise — no filler praise.
+If the PR looks good, return an empty comments array.
+
+// Keep these if you still use repo guide files:
+// REVIEWER.md, copilot-instructions, path-instructions (see full file)
+
+// Output contract — keep in sync with src/services/ai.ts schemas
+Respond with JSON only (no markdown fences):
+{
+  "summary": "&lt;2-4 sentence overview&gt;",
+  "comments": [
+    {
+      "file": "&lt;path&gt;",
+      "line": &lt;last line of range&gt;,
+      "start_line": &lt;first line, omit for single-line&gt;,
+      "severity": "critical" | "warning" | "suggestion",
+      "body": "&lt;markdown comment&gt;"
+    }
+  ]
+}`;</code></pre>
+        </div>
+
+        <h4>What you can safely change</h4>
+        <ul>
+          <li><strong>Persona &amp; tone</strong> — stricter, kinder, no humor, security-only, etc.</li>
+          <li><strong>Default focus</strong> — e.g. prioritize auth/payments, ignore pure style nits.</li>
+          <li><strong>Comment policy</strong> — max comments, when to leave the PR alone, severity bar.</li>
+          <li><strong>Language</strong> — review in another language.</li>
+        </ul>
+
+        <h4>What to keep stable</h4>
+        <ul>
+          <li><strong>JSON-only response</strong> with <code>summary</code> + <code>comments[]</code> — parsed in <code>src/services/ai.ts</code> (<code>reviewResponseSchema</code>).</li>
+          <li><strong>Comment fields</strong> — <code>file</code>, <code>line</code>, optional <code>start_line</code>, <code>severity</code>, <code>body</code>. Extra/missing fields break inline posting.</li>
+          <li><strong>Line numbers</strong> — the user prompt annotates the diff as <code>[42] +code</code>; the model must use those numbers.</li>
+          <li><strong>Suggestion blocks</strong> — if you still want one-click fixes, keep the GitHub <code>```suggestion</code> rules.</li>
+          <li><strong>Guide-file sections</strong> — if you rely on <code>REVIEWER.md</code> / Copilot files, keep the instructions that describe <code>&lt;reviewer-guide&gt;</code>, <code>&lt;copilot-instructions&gt;</code>, and <code>&lt;path-instructions&gt;</code>.</li>
+        </ul>
+        <div class="callout">
+          <p>
+            If you change the JSON shape, update the Zod schemas and review-posting logic in
+            <code>src/services/ai.ts</code> and <code>src/handlers/pull-request.ts</code> to match —
+            otherwise reviews will fail to parse or won’t land as inline comments.
+          </p>
+        </div>
+
+        <h4>Example: stricter, security-first prompt</h4>
+        <div class="code-block">
+          <div class="diff-bar"><span class="file">snippet — replace the opening of REVIEW_SYSTEM_PROMPT</span></div>
+          <pre><code>You are a staff security engineer reviewing a GitHub pull request.
+
+Prioritize, in order:
+1. AuthZ/AuthN bypasses, injection, secret leakage, unsafe deserialization
+2. Data loss / incorrect financial or billing logic
+3. Reliability (timeouts, retries, partial failure)
+
+Do not comment on formatting, naming taste, or import order unless it hides a bug.
+At most 8 inline comments — merge related notes. Severity "suggestion" only for
+real defense-in-depth improvements.
+
+If nothing material is wrong, return { "summary": "…", "comments": [] }.
+
+// …keep line-number + JSON contract from the stock prompt…</code></pre>
+        </div>
+
+        <h4>Q&amp;A and thread prompts</h4>
+        <p>
+          Mentions and review-thread replies use plain markdown (not JSON).
+          Edit <code>QUESTION_SYSTEM_PROMPT</code> and <code>THREAD_SYSTEM_PROMPT</code> in
+          <code>src/prompts/question.ts</code> the same way — tone, length, whether to emit
+          <code>```suggestion</code> blocks in threads.
+        </p>
+
+        <h4>Ship the change</h4>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Deploy mode</th>
+                <th>After editing prompts</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>AWS Lambda</td>
+                <td><code>pnpm deploy</code> (rebuilds the bundle and updates the stack)</td>
+              </tr>
+              <tr>
+                <td>Cloudflare Workers</td>
+                <td><code>pnpm deploy:worker</code></td>
+              </tr>
+              <tr>
+                <td>GitHub Actions</td>
+                <td>Point the workflow at your fork/ref:
+                  <code>uses: your-org/nitpicker@your-branch</code>
+                  (or vendor the action path). No separate deploy step.</td>
+              </tr>
+              <tr>
+                <td>Local</td>
+                <td><code>pnpm dev</code> picks up <code>src/prompts/*</code> on restart / via <code>tsx watch</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="code-block">
+          <div class="diff-bar"><span class="file">.github/workflows/nitpicker.yml — Actions on a fork</span></div>
+          <pre><code>- uses: your-org/nitpicker@main   # or a tag / commit SHA
+  with:
+    llm-api-key: ${{ secrets.LLM_API_KEY }}</code></pre>
+        </div>
+        <p>
+          Keeping a fork up to date: periodically merge <code>sagivo/nitpicker</code> into yours,
+          resolve conflicts in <code>src/prompts/*</code>, redeploy.
+        </p>
+
+        <h4>Rules vs system prompt — which to use?</h4>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Goal</th>
+                <th>Use</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Per-repo standards, checklists, path rules</td>
+                <td><code>REVIEWER.md</code> / Copilot / path instructions</td>
+              </tr>
+              <tr>
+                <td>Same rules on many repos without repeating files</td>
+                <td>System prompt (or org-wide template repos that ship <code>REVIEWER.md</code>)</td>
+              </tr>
+              <tr>
+                <td>Change voice, severity bar, max comments, language</td>
+                <td>System prompt</td>
+              </tr>
+              <tr>
+                <td>Change JSON fields or review posting behavior</td>
+                <td>System prompt <em>and</em> <code>ai.ts</code> / handlers</td>
+              </tr>
+              <tr>
+                <td>No fork, no redeploy</td>
+                <td>Guide files only</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="usage" class="docs-section">
+        <h2>Usage</h2>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Trigger</th>
+                <th>Where</th>
+                <th>What happens</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>PR opened / reopened / ready for review</td>
+                <td>Pull request</td>
+                <td>Full review if <code>REVIEW_ON_OPEN</code> is true (skips drafts)</td>
+              </tr>
+              <tr>
+                <td><code>/nitpicker</code></td>
+                <td>PR comment (exact body)</td>
+                <td>On-demand full review</td>
+              </tr>
+              <tr>
+                <td><code>@bot-name …</code></td>
+                <td>PR comment</td>
+                <td>Answers using PR diff + guides</td>
+              </tr>
+              <tr>
+                <td><code>@bot-name …</code></td>
+                <td>Review thread comment</td>
+                <td>Continues the thread; can emit apply-able suggestions</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p>
+          <code>BOT_NAME</code> must match how you mention the bot.
+          App slug <code>nitpicker-bot</code> → <code>@nitpicker-bot why is this cached?</code>.
+          Actions default → <code>@github-actions can we drop this index?</code>.
+        </p>
+        <p>
+          While working, Nit adds an eyes reaction, then removes it when the reply is posted.
+        </p>
+      </section>
+
+      <section id="local-dev" class="docs-section">
+        <h2>Local dev</h2>
+        <div class="code-block">
+          <div class="diff-bar"><span class="file">shell</span></div>
+          <pre><code>cd ~/nitpicker
+pnpm install
+cp .env.example .env   # fill APP_ID, keys, etc.
+pnpm dev               # http://localhost:3000
+
+# forward GitHub webhooks
+smee -u &lt;your-smee-url&gt; --target http://localhost:3000/api/github/webhooks</code></pre>
+        </div>
+        <p>
+          Point the GitHub App’s webhook URL at your smee (or similar) channel while developing.
+          Typecheck with <code>pnpm typecheck</code>.
+        </p>
+      </section>
+
+      <section id="installer-flags" class="docs-section">
+        <h2>Installer flags &amp; env</h2>
+        <p>Pass after <code>bash -s --</code>, or to <code>pnpm setup</code>:</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Flag</th>
+                <th>Default</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>--method NAME</code></td>
+                <td>prompt</td>
+                <td><code>lambda</code> · <code>worker</code> · <code>actions</code></td>
+              </tr>
+              <tr>
+                <td><code>--org ORG</code></td>
+                <td>your user</td>
+                <td>GitHub org that will own the app</td>
+              </tr>
+              <tr>
+                <td><code>--name NAME</code></td>
+                <td><code>nitpicker</code></td>
+                <td>GitHub App name</td>
+              </tr>
+              <tr>
+                <td><code>--provider NAME</code></td>
+                <td><code>anthropic</code></td>
+                <td><code>anthropic</code> · <code>openai</code> · <code>google</code></td>
+              </tr>
+              <tr>
+                <td><code>--model MODEL</code></td>
+                <td>per provider</td>
+                <td>Model id</td>
+              </tr>
+              <tr>
+                <td><code>--llm-key KEY</code></td>
+                <td>—</td>
+                <td>Skip the API key prompt</td>
+              </tr>
+              <tr>
+                <td><code>--region R</code></td>
+                <td><code>us-east-1</code></td>
+                <td>AWS region (Lambda)</td>
+              </tr>
+              <tr>
+                <td><code>--stack NAME</code></td>
+                <td><code>nitpicker</code></td>
+                <td>CloudFormation stack (Lambda)</td>
+              </tr>
+              <tr>
+                <td><code>--worker-name N</code></td>
+                <td><code>nitpicker</code></td>
+                <td>Worker name</td>
+              </tr>
+              <tr>
+                <td><code>--skip-deploy</code></td>
+                <td>off</td>
+                <td>Write <code>.env</code> only; deploy later</td>
+              </tr>
+              <tr>
+                <td><code>-h</code>, <code>--help</code></td>
+                <td>—</td>
+                <td>Flag help</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p>Environment variables the installer also honors:</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Variable</th>
+                <th>Default</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>NITPICKER_HOME</code></td>
+                <td><code>~/nitpicker</code></td>
+                <td>Clone / install directory</td>
+              </tr>
+              <tr>
+                <td><code>NITPICKER_REPO</code></td>
+                <td>official git remote</td>
+                <td>Override to install a fork</td>
+              </tr>
+              <tr>
+                <td><code>NITPICKER_BRANCH</code></td>
+                <td><code>main</code></td>
+                <td>Branch to check out</td>
+              </tr>
+              <tr>
+                <td><code>DEPLOY_METHOD</code></td>
+                <td>—</td>
+                <td>Same as <code>--method</code></td>
+              </tr>
+              <tr>
+                <td><code>LLM_API_KEY</code></td>
+                <td>—</td>
+                <td>Same as <code>--llm-key</code>; provider-specific <code>*_API_KEY</code> also accepted</td>
+              </tr>
+              <tr>
+                <td><code>AI_PROVIDER</code> / <code>AI_MODEL</code></td>
+                <td>anthropic / per provider</td>
+                <td>Same as flags</td>
+              </tr>
+              <tr>
+                <td><code>AWS_REGION</code> / <code>STACK_NAME</code></td>
+                <td>see above</td>
+                <td>Lambda</td>
+              </tr>
+              <tr>
+                <td><code>CF_WORKER_NAME</code></td>
+                <td><code>nitpicker</code></td>
+                <td>Workers</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="code-block">
+          <div class="diff-bar"><span class="file">example</span></div>
+          <pre><code>NITPICKER_HOME=~/tools/nitpicker \
+  curl -fsSL https://nitpicker.dev/install | bash -s -- \
+    --method worker \
+    --provider openai \
+    --model gpt-4.1</code></pre>
+        </div>
+      </section>
+
+      <section id="compare" class="docs-section">
+        <h2>How it compares</h2>
+        <p>
+          Looking for a <a href="#vs-coderabbit"><strong>CodeRabbit alternative</strong></a>, a
+          <strong>self-hosted AI code review</strong> bot, or an
+          <strong>open-source AI PR reviewer</strong> that doesn’t meter every
+          comment? Here’s how Nitpicker stacks up against the top AI pull request
+          review tools.
+        </p>
+        <p>
+          Most “AI code review” products are SaaS: they host the bot, pick the
+          model, and bill per seat or per PR. Nitpicker is the other path —
+          <strong>MIT-licensed</strong>, <strong>self-hostable</strong>,
+          <strong>bring-your-own-LLM</strong>, and built for
+          <strong>diff-only code review</strong> so you spend tokens on the
+          change, not the whole monorepo.
+        </p>
+
+        <h3 id="compare-table">Nitpicker vs popular AI PR reviewers</h3>
+        <p>
+          Snapshot against the tools teams usually evaluate for automated
+          GitHub PR review:
+          <a href="#vs-coderabbit">CodeRabbit</a>,
+          <a href="#vs-greptile">Greptile</a>,
+          <a href="#vs-graphite">Graphite Diamond</a>,
+          <a href="#vs-qodo">Qodo (PR-Agent)</a>, and
+          <a href="#vs-copilot">GitHub Copilot code review</a>.
+        </p>
+        <div class="table-wrap compare-wrap">
+          <table class="compare-table">
+            <thead>
+              <tr>
+                <th scope="col">Capability</th>
+                <th scope="col" class="compare-nit"><a href="https://nitpicker.dev">Nitpicker</a></th>
+                <th scope="col"><a href="https://www.coderabbit.ai" rel="noopener noreferrer" target="_blank">CodeRabbit</a></th>
+                <th scope="col"><a href="https://www.greptile.com" rel="noopener noreferrer" target="_blank">Greptile</a></th>
+                <th scope="col"><a href="https://graphite.dev" rel="noopener noreferrer" target="_blank">Graphite</a></th>
+                <th scope="col"><a href="https://www.qodo.ai" rel="noopener noreferrer" target="_blank">Qodo</a></th>
+                <th scope="col"><a href="https://github.com/features/copilot" rel="noopener noreferrer" target="_blank">Copilot</a></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Open source</th>
+                <td class="compare-nit"><span class="mark mark-yes" title="MIT">✓</span></td>
+                <td><span class="mark mark-no" title="No">✕</span></td>
+                <td><span class="mark mark-no" title="No">✕</span></td>
+                <td><span class="mark mark-no" title="No">✕</span></td>
+                <td><span class="mark mark-half" title="Core open source">~</span></td>
+                <td><span class="mark mark-no" title="No">✕</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Self-host / on-prem</th>
+                <td class="compare-nit"><span class="mark mark-yes" title="Lambda, Workers, Actions, BYO">✓</span></td>
+                <td><span class="mark mark-no" title="SaaS only">✕</span></td>
+                <td><span class="mark mark-no" title="SaaS only">✕</span></td>
+                <td><span class="mark mark-no" title="SaaS only">✕</span></td>
+                <td><span class="mark mark-yes" title="Self-host agent">✓</span></td>
+                <td><span class="mark mark-half" title="GitHub-hosted">~</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Bring your own model</th>
+                <td class="compare-nit"><span class="mark mark-yes" title="Any provider">✓</span></td>
+                <td><span class="mark mark-no" title="Vendor models">✕</span></td>
+                <td><span class="mark mark-no" title="Vendor models">✕</span></td>
+                <td><span class="mark mark-no" title="Vendor models">✕</span></td>
+                <td><span class="mark mark-yes" title="Many providers">✓</span></td>
+                <td><span class="mark mark-half" title="GitHub / OpenAI stack">~</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Diff-only (token-efficient)</th>
+                <td class="compare-nit"><span class="mark mark-yes" title="Diff + optional guides">✓</span></td>
+                <td><span class="mark mark-half" title="Diff + product context">~</span></td>
+                <td><span class="mark mark-no" title="Full-repo graph">✕</span></td>
+                <td><span class="mark mark-half" title="Diff in Graphite flow">~</span></td>
+                <td><span class="mark mark-half" title="Diff + tools">~</span></td>
+                <td><span class="mark mark-half" title="Diff in GitHub UI">~</span></td>
+              </tr>
+              <tr>
+                <th scope="row">No per-seat AI tax</th>
+                <td class="compare-nit"><span class="mark mark-yes" title="Your API bill">✓</span></td>
+                <td><span class="mark mark-no" title="Seat / plan">✕</span></td>
+                <td><span class="mark mark-no" title="Seat / plan">✕</span></td>
+                <td><span class="mark mark-no" title="Graphite plan">✕</span></td>
+                <td><span class="mark mark-half" title="Keys or cloud">~</span></td>
+                <td><span class="mark mark-no" title="Copilot seat">✕</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Inline GitHub comments</th>
+                <td class="compare-nit"><span class="mark mark-yes" title="Yes + suggestion blocks">✓</span></td>
+                <td><span class="mark mark-yes" title="Yes">✓</span></td>
+                <td><span class="mark mark-yes" title="Yes">✓</span></td>
+                <td><span class="mark mark-yes" title="Yes">✓</span></td>
+                <td><span class="mark mark-yes" title="Yes">✓</span></td>
+                <td><span class="mark mark-yes" title="Yes">✓</span></td>
+              </tr>
+              <tr>
+                <th scope="row">PR Q&A / chat</th>
+                <td class="compare-nit"><span class="mark mark-yes" title="@bot on PRs and threads">✓</span></td>
+                <td><span class="mark mark-yes" title="Yes">✓</span></td>
+                <td><span class="mark mark-yes" title="Yes">✓</span></td>
+                <td><span class="mark mark-half" title="Product-dependent">~</span></td>
+                <td><span class="mark mark-yes" title="Yes">✓</span></td>
+                <td><span class="mark mark-yes" title="Copilot Chat">✓</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Custom review rules</th>
+                <td class="compare-nit"><span class="mark mark-yes" title="REVIEWER.md, Copilot files, prompts">✓</span></td>
+                <td><span class="mark mark-yes" title="In-product config">✓</span></td>
+                <td><span class="mark mark-yes" title="Custom context">✓</span></td>
+                <td><span class="mark mark-yes" title="Graphite config">✓</span></td>
+                <td><span class="mark mark-yes" title="Tools + config">✓</span></td>
+                <td><span class="mark mark-yes" title="Custom instructions">✓</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Low vendor lock-in</th>
+                <td class="compare-nit"><span class="mark mark-yes" title="Own app, keys, prompts">✓</span></td>
+                <td><span class="mark mark-no" title="High">✕</span></td>
+                <td><span class="mark mark-no" title="High">✕</span></td>
+                <td><span class="mark mark-no" title="High (stack)">✕</span></td>
+                <td><span class="mark mark-half" title="Low–medium">~</span></td>
+                <td><span class="mark mark-no" title="High (GitHub)">✕</span></td>
+              </tr>
+              <tr>
+                <th scope="row">Code stays on your terms</th>
+                <td class="compare-nit"><span class="mark mark-yes" title="Only the LLM you choose">✓</span></td>
+                <td><span class="mark mark-no" title="Their pipeline">✕</span></td>
+                <td><span class="mark mark-no" title="Their pipeline">✕</span></td>
+                <td><span class="mark mark-no" title="Their pipeline">✕</span></td>
+                <td><span class="mark mark-half" title="Depends on deploy">~</span></td>
+                <td><span class="mark mark-no" title="GitHub / Microsoft">✕</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="compare-legend">
+          <span class="mark mark-yes">✓</span> yes
+          <span class="mark mark-half">~</span> partial
+          <span class="mark mark-no">✕</span> no
+          <span class="compare-legend-note">Hover a mark for detail.</span>
+        </p>
+        <div class="callout">
+          <p>
+            Features move fast. Treat the table as positioning, not a sales
+            contract — always verify current pricing and capabilities on each
+            vendor’s site. Nitpicker’s edge is structural: open source, self-host,
+            BYO model, diff-first.
+          </p>
+        </div>
+
+        <h3 id="compare-when">When to pick Nitpicker</h3>
+        <ul class="feature-list">
+          <li>
+            <strong>Open-source AI code review you can audit</strong> —
+            read the prompts, fork the bot, keep the workflow in git.
+          </li>
+          <li>
+            <strong>Self-hosted PR review for regulated or private repos</strong> —
+            run on your AWS, Cloudflare, or Actions runners; send tokens only to
+            the provider you already trust.
+          </li>
+          <li>
+            <strong>Cost-effective automated code review at scale</strong> —
+            diff-only context keeps LLM spend predictable vs full-repo indexers.
+          </li>
+          <li>
+            <strong>Model freedom</strong> — swap Claude, GPT, Gemini, or whatever
+            ships next without changing review vendors.
+          </li>
+          <li>
+            <strong>No per-seat AI review tax</strong> — pay infrastructure + API
+            usage, not another SaaS line item for every engineer.
+          </li>
+        </ul>
+
+        <h3 id="compare-when-not">When a SaaS AI reviewer might fit better</h3>
+        <ul class="feature-list">
+          <li>
+            <strong>Zero ops</strong> — you want a managed GitHub App and someone
+            else’s uptime page
+            (<a href="https://www.coderabbit.ai" rel="noopener noreferrer" target="_blank">CodeRabbit</a>,
+            <a href="https://www.greptile.com" rel="noopener noreferrer" target="_blank">Greptile</a>,
+            <a href="https://github.com/features/copilot" rel="noopener noreferrer" target="_blank">Copilot</a>).
+          </li>
+          <li>
+            <strong>Full-codebase semantic review</strong> — you want a continuously
+            indexed monorepo graph
+            (<a href="https://www.greptile.com" rel="noopener noreferrer" target="_blank">Greptile</a>-style)
+            more than a sharp diff pass.
+          </li>
+          <li>
+            <strong>Stacked-PR workflow lock-in</strong> — you’re all-in on
+            <a href="https://graphite.dev" rel="noopener noreferrer" target="_blank">Graphite</a>
+            and want review inside that product surface.
+          </li>
+          <li>
+            <strong>Enterprise procurement bundle</strong> — you need a vendor MSA,
+            SOC2 packet, and a single throat to choke already on the shortlist.
+          </li>
+        </ul>
+
+        <h3 id="compare-alternatives">Nitpicker as an alternative</h3>
+        <p>
+          Jump to a specific comparison:
+          <a href="#vs-coderabbit">vs CodeRabbit</a> ·
+          <a href="#vs-greptile">vs Greptile</a> ·
+          <a href="#vs-graphite">vs Graphite Diamond</a> ·
+          <a href="#vs-qodo">vs Qodo PR-Agent</a> ·
+          <a href="#vs-copilot">vs Copilot code review</a>.
+        </p>
+
+        <h4 id="vs-coderabbit">Nitpicker vs CodeRabbit</h4>
+        <p>
+          Searching for a
+          <strong>CodeRabbit alternative</strong>?
+          <a href="https://www.coderabbit.ai" rel="noopener noreferrer" target="_blank">CodeRabbit</a>
+          is a polished managed AI PR reviewer with deep product UX. Choose
+          Nitpicker when seat pricing, data residency, or black-box prompts become
+          the bottleneck — you self-host, bring your own model, and audit every
+          prompt in git. See the
+          <a href="#compare-table">feature matrix</a>.
+        </p>
+
+        <h4 id="vs-greptile">Nitpicker vs Greptile</h4>
+        <p>
+          Looking for a
+          <strong>Greptile alternative</strong>?
+          <a href="https://www.greptile.com" rel="noopener noreferrer" target="_blank">Greptile</a>
+          indexes the full codebase for semantic review. Nitpicker stays
+          lightweight: <strong>diff-only AI code review</strong> for fast pull
+          request feedback without maintaining a second source-of-truth index.
+          Pick Greptile when monorepo graph context is the product; pick Nitpicker
+          when cost, speed, and self-host control matter more.
+        </p>
+
+        <h4 id="vs-graphite">Nitpicker vs Graphite Diamond</h4>
+        <p>
+          <a href="https://graphite.dev" rel="noopener noreferrer" target="_blank">Graphite</a>
+          Diamond folds AI review into stacked PRs and the Graphite workflow.
+          Nitpicker is a standalone <strong>open-source AI PR reviewer</strong>
+          that runs on Lambda, Workers, or Actions — no Graphite stack required.
+          Use Diamond if you’re already all-in on Graphite; use Nitpicker if you
+          want the bot without the platform.
+        </p>
+
+        <h4 id="vs-qodo">Nitpicker vs Qodo (PR-Agent)</h4>
+        <p>
+          <a href="https://www.qodo.ai" rel="noopener noreferrer" target="_blank">Qodo</a>
+          (and open-source PR-Agent) is a capable multi-tool review agent. If you
+          like that idea but want a smaller surface area focused on inline nits,
+          suggestion blocks, and <code>@bot</code> Q&A — with the same
+          bring-your-own-LLM freedom — Nitpicker is the tighter lane.
+          <a href="https://github.com/qodo-ai/pr-agent" rel="noopener noreferrer" target="_blank">PR-Agent on GitHub</a>
+          remains a solid OSS peer; Nitpicker optimizes for diff-first simplicity.
+        </p>
+
+        <h4 id="vs-copilot">Nitpicker vs GitHub Copilot code review</h4>
+        <p>
+          <a href="https://github.com/features/copilot" rel="noopener noreferrer" target="_blank">GitHub Copilot code review</a>
+          lives inside the GitHub UI on a Copilot seat. Nitpicker gives you
+          Copilot-style automated review energy with <strong>your own API keys</strong>,
+          model choice, and deploy target — plus fully customizable
+          <code>REVIEWER.md</code> rules. Ideal when you want AI pull request
+          comments without another seat tax or Microsoft-only pipeline.
+        </p>
+
+        <p>
+          Bottom line: Nitpicker is the <strong>developer-owned AI pull request
+          reviewer</strong> — automated code review on GitHub, open source,
+          self-hosted, multi-model, optimized for the diff. Ship the bot you
+          control; keep the pride (and the invoice) honest.
+        </p>
+        <p>
+          Ready to try it? <a href="#install">Install in one line</a> or
+          <a href="#deploy">pick a deploy method</a>.
+        </p>
+      </section>
+
+      <footer>
+        <img src="../assets/nit-avatar.png" width="20" height="20" alt="" />
+        <span>
+          <strong>nitpicker</strong> —
+          <a href="../">home</a> ·
+          <a href="https://github.com/sagivo/nitpicker">github</a> ·
+          MIT licensed. Nit is fictional. Your Friday deploys are not.
+        </span>
+      </footer>
+    </main>
+  </div>
+
+  <script src="../main.js"></script>
+</body>
+</html>

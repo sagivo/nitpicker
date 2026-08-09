@@ -288,7 +288,7 @@ export async function removeEyesReaction(
         });
         break;
       case "reviewComment":
-        await context.octokit.rest.reactions.deleteForPullRequestReviewComment({
+        await context.octokit.rest.reactions.deleteForPullRequestComment({
           ...repo,
           comment_id: target.commentId,
           reaction_id: reactionId,

@@ -9,7 +9,10 @@
     "start": "node dist/index.js",
     "build": "tsc",
     "build:lambda": "node esbuild.config.mjs",
+    "actions": "tsx src/actions.ts",
     "deploy": "./scripts/deploy.sh",
+    "deploy:worker": "./scripts/deploy-worker.sh",
+    "deploy:lambda": "./scripts/deploy.sh",
     "setup": "./scripts/install.sh",
     "typecheck": "tsc --noEmit"
   },
@@ -28,10 +31,12 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260809.1",
     "@types/aws-lambda": "^8.10.160",
     "@types/node": "^25.3.0",
     "esbuild": "^0.27.3",
     "tsx": "^4.21.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "wrangler": "^4.28.0"
   }
 }

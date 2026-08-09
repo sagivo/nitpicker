@@ -57,7 +57,7 @@ if [[ ! -f scripts/install.sh ]]; then
   die "scripts/install.sh missing — is this the nitpicker repo?"
 fi
 
-chmod +x scripts/install.sh scripts/deploy.sh 2>/dev/null || true
+chmod +x scripts/install.sh scripts/deploy.sh scripts/deploy-worker.sh 2>/dev/null || true
 chmod +x scripts/create-github-app.mjs scripts/update-webhook.mjs 2>/dev/null || true
 
 # ── hand off to the setup wizard ────────────────────────────────────

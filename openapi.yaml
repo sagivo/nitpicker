@@ -4,8 +4,10 @@ info:
   description: |
     AI-powered GitHub pull request reviewer built with [Probot](https://probot.github.io/) and [Vercel AI SDK](https://ai-sdk.dev).
 
-    This API is a GitHub App webhook receiver. It does not expose a traditional REST API — instead, GitHub
-    delivers webhook events to the single `/api/github/webhooks` endpoint, and the bot responds by calling
+    This API is a GitHub App webhook receiver (AWS Lambda or Cloudflare Workers).
+    GitHub Actions mode runs the same handlers in a workflow without this HTTP endpoint.
+
+    GitHub delivers webhook events to the single webhook URL, and the bot responds by calling
     the GitHub API to post reviews, comments, and reactions.
 
     ## Supported interactions

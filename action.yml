@@ -1,0 +1,72 @@
+name: Nitpicker
+description: AI-powered GitHub PR reviewer (diff-only)
+author: sagivo
+branding:
+  icon: eye
+  color: gray-dark
+
+inputs:
+  github-token:
+    description: Token used to post reviews/comments (default GITHUB_TOKEN)
+    required: false
+    default: ${{ github.token }}
+  llm-api-key:
+    description: LLM provider API key
+    required: true
+  ai-provider:
+    description: anthropic | openai | google
+    required: false
+    default: anthropic
+  ai-model:
+    description: Model id
+    required: false
+    default: claude-sonnet-5
+  bot-name:
+    description: Bot login without [bot] (github-actions when using GITHUB_TOKEN)
+    required: false
+    default: github-actions
+  review-on-open:
+    description: Auto-review on PR open/reopen/ready_for_review
+    required: false
+    default: "true"
+  max-diff-size:
+    description: Max diff chars sent to the model
+    required: false
+    default: "50000"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: "20"
+
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        corepack enable >/dev/null 2>&1 || true
+        if command -v pnpm >/dev/null 2>&1; then
+          pnpm install --frozen-lockfile
+        elif [[ -f pnpm-lock.yaml ]]; then
+          npm install -g pnpm
+          pnpm install --frozen-lockfile
+        else
+          npm ci --omit=dev 2>/dev/null || npm install --omit=dev
+        fi
+
+    - name: Run nitpicker
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        LLM_API_KEY: ${{ inputs.llm-api-key }}
+        AI_PROVIDER: ${{ inputs.ai-provider }}
+        AI_MODEL: ${{ inputs.ai-model }}
+        BOT_NAME: ${{ inputs.bot-name }}
+        REVIEW_ON_OPEN: ${{ inputs.review-on-open }}
+        MAX_DIFF_SIZE: ${{ inputs.max-diff-size }}
+        GITHUB_EVENT_NAME: ${{ github.event_name }}
+        GITHUB_EVENT_PATH: ${{ github.event_path }}
+      run: npx --yes tsx src/actions.ts

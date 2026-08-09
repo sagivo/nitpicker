@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Nitpicker — the AI reviewer your ego didn’t ask for</title>
-  <meta name="description" content="Open-source AI that reviews GitHub PRs, roasts your variable names, and deploys on Lambda. LGTM is not in its vocabulary." />
+  <meta name="description" content="Open-source AI that reviews GitHub PRs, roasts your variable names, and deploys on Lambda, Cloudflare Workers, or GitHub Actions. LGTM is not in its vocabulary." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,600&display=swap" rel="stylesheet" />
@@ -24,11 +24,12 @@
   <a class="skip" href="#main">Skip to content</a>
 
   <header class="top">
-    <a class="brand" href="#">
+    <a class="brand" href="./">
       <img src="assets/nit-avatar.png" width="28" height="28" alt="" />
       <span>nitpicker</span>
     </a>
     <nav>
+      <a href="docs/">Docs</a>
       <a class="primary" id="github-link" href="https://github.com/sagivo/nitpicker">Star on GitHub</a>
     </nav>
   </header>
@@ -37,15 +38,11 @@
     <section class="hero">
       <div class="hero-top">
         <div class="hero-copy">
-          <p class="eyebrow">
-            <span class="dot"></span>
-            open source · deploy in 30 seconds · free therapy (for your codebase)
-          </p>
-          <h1>LGTM is a cry for help.<br /><em>Nit answers.</em></h1>
+          <h1>The open-source AI PR reviewer that helps you <em>ship</em>.</h1>
           <p class="lede">
             AI that reviews GitHub PRs like the coworker who actually reads the diff —
             then leaves comments you’ll think about in the shower.
-            Deploys on Lambda. Costs pennies. Costs pride.
+            AWS Lambda, Cloudflare Workers, or GitHub Actions. Costs pennies. Costs pride.
           </p>
         </div>
         <figure class="hero-figure">
@@ -92,27 +89,6 @@
 
       <article class="review">
         <header class="review-head">
-          <p class="review-label"><span class="pr">pr #902</span> rename for clarity</p>
-          <span class="badge warn">naming court</span>
-        </header>
-        <div class="diff">
-          <div class="diff-bar"><span class="file">user.ts</span><span class="stat">+1 −1</span></div>
-          <pre><code><span class="meta">@@ fetch @@</span>
-<span class="del"> const user = await db.find(id)</span>
-<span class="add"> const data2 = await db.find(id)</span></code></pre>
-        </div>
-        <div class="comment">
-          <img class="face" src="assets/nit-shrug.png" width="40" height="40" alt="" />
-          <div class="bubble">
-            <p class="who"><strong>nit</strong> <span>commented on user.ts</span></p>
-            <p><code>data2</code> is what you name a variable when you’ve given up on life but not on shipping.</p>
-            <p class="verdict">close PR · open a dictionary</p>
-          </div>
-        </div>
-      </article>
-
-      <article class="review">
-        <header class="review-head">
           <p class="review-label"><span class="pr">pr #77</span> improve error handling</p>
           <span class="badge bad">lol no</span>
         </header>
@@ -144,7 +120,7 @@
 <span class="add"> expect(true).toBe(true) // flaky otherwise</span></code></pre>
         </div>
         <div class="comment">
-          <img class="face" src="assets/nit-clipboard.png" width="40" height="40" alt="" />
+          <img class="face" src="assets/nit-shrug.png" width="40" height="40" alt="" />
           <div class="bubble">
             <p class="who"><strong>nit</strong> <span>commented on checkout.test.ts</span></p>
             <p>Congrats, your test suite is now a motivational poster.</p>
@@ -152,45 +128,59 @@
           </div>
         </div>
       </article>
+    </section>
 
-      <div class="split">
-        <article class="review compact">
-          <header class="review-head">
-            <p class="review-label"><span class="pr">auto</span> reviews on open</p>
-          </header>
-          <div class="diff">
-            <div class="diff-bar"><span class="file">process.yml</span><span class="stat">+1 −1</span></div>
-            <pre><code><span class="meta">@@ review @@</span>
-<span class="del"> wait for Sarah (OOO until heat death)</span>
-<span class="add"> nit shows up in 12s, already disappointed</span></code></pre>
+    <section class="why" id="why" aria-label="Why nitpicker">
+      <header class="why-head">
+        <p class="eyebrow">why nitpicker · the diff that matters</p>
+        <h2>Stop renting your code review.</h2>
+      </header>
+
+      <div class="why-stage">
+        <div class="why-diff">
+          <div class="diff-bar">
+            <span class="file">reviewer.ts</span>
+            <span class="stat">+3 −3</span>
           </div>
-          <div class="comment">
-            <img class="face" src="assets/nit-avatar.png" width="40" height="40" alt="" />
-            <div class="bubble">
-              <p class="who"><strong>nit</strong> <span>on process</span></p>
-              <p>Faster than Slack. Ruder than your tech lead.</p>
+          <div class="why-hunks" role="list">
+            <div class="why-hunk" role="listitem">
+              <div class="why-lines">
+                <div class="del"><span class="g">−</span><code>const data = vendor.ingest(yourPrivateDiffs)</code></div>
+                <div class="add"><span class="g">+</span><code>const data = yours // FOSS. you hold the keys.</code></div>
+              </div>
+              <p class="why-note"><strong>Free & open source.</strong> Self-host. Audit the prompts. Your PRs never become someone else’s training set.</p>
+            </div>
+
+            <div class="why-hunk" role="listitem">
+              <div class="why-lines">
+                <div class="del"><span class="g">−</span><code>await essay.lengthReview({ tokens: "yes" })</code></div>
+                <div class="add"><span class="g">+</span><code>await nit.fast({ tokens: "stingy" }) // pride optional</code></div>
+              </div>
+              <p class="why-note"><strong>Lightweight.</strong> Extremely fast PR reviews. Cost-effective on tokens — sharp nits, not novels.</p>
+            </div>
+
+            <div class="why-hunk" role="listitem">
+              <div class="why-lines">
+                <div class="del"><span class="g">−</span><code>deploy.to("their-cloud-only")</code></div>
+                <div class="add"><span class="g">+</span><code>deploy.to(lambda | workers | actions | byo)</code></div>
+              </div>
+              <p class="why-note"><strong>Deploy anywhere.</strong> AWS Lambda, Cloudflare Workers, GitHub Actions — or bring your own server.</p>
+              <ul class="why-targets" aria-label="Deployment targets">
+                <li><span class="dot lambda"></span>AWS Lambda</li>
+                <li><span class="dot workers"></span>Cloudflare Workers</li>
+                <li><span class="dot actions"></span>GitHub Actions</li>
+                <li><span class="dot byo"></span>Your server</li>
+              </ul>
             </div>
           </div>
-        </article>
+        </div>
 
-        <article class="review compact">
-          <header class="review-head">
-            <p class="review-label"><span class="pr">infra</span> one-command setup</p>
-          </header>
-          <div class="diff">
-            <div class="diff-bar"><span class="file">deploy.sh</span><span class="stat">+1 −1</span></div>
-            <pre><code><span class="meta">@@ runtime @@</span>
-<span class="del"> EC2 named "temp" (est. 2019)</span>
-<span class="add"> Lambda · roasts · naps · $0.00 idle</span></code></pre>
-          </div>
-          <div class="comment">
-            <img class="face" src="assets/nit-wave.png" width="40" height="40" alt="" />
-            <div class="bubble">
-              <p class="who"><strong>nit</strong> <span>on deploy</span></p>
-              <p>Wakes only when you ship something dumb. So… often.</p>
-            </div>
-          </div>
-        </article>
+        <aside class="why-verdict">
+          <img src="assets/nit-clipboard.png" width="56" height="56" alt="" />
+          <p class="why-verdict-label">nit’s take</p>
+          <p class="why-verdict-body">You can keep paying rent on a black box, or you can own the reviewer. I know which diff I’d approve.</p>
+          <p class="verdict">approved · your infra, your rules</p>
+        </aside>
       </div>
     </section>
 
@@ -210,7 +200,7 @@
 
     <footer>
       <img src="assets/nit-avatar.png" width="20" height="20" alt="" />
-      <span><strong>nitpicker</strong> — open-source AI PR reviews. Nit is fictional. The part of you that ships on Friday at 4:59 is not.</span>
+      <span><strong>nitpicker</strong> — open-source AI PR reviews. <a href="docs/">Docs</a> for config, deploy &amp; customize. Nit is fictional. The part of you that ships on Friday at 4:59 is not.</span>
     </footer>
   </main>
 
