@@ -72,8 +72,8 @@ function buildManifest(redirectUrl) {
     default_permissions: {
       contents: "read",
       issues: "write",
+      metadata: "read",
       pull_requests: "write",
-      reactions: "write",
     },
     default_events: [
       "pull_request",
@@ -106,7 +106,7 @@ function setupPage(manifest, githubNewAppUrl) {
     <input type="hidden" name="state" value="${STATE}" />
     <button type="submit">Continue on GitHub →</button>
   </form>
-  <p class="muted">Permissions: Pull requests (R/W), Issues (R/W), Contents (R), Reactions (W).<br/>
+  <p class="muted">Permissions: Pull requests (R/W), Issues (R/W), Contents (R), Metadata (R).<br/>
   Events: pull_request, issue_comment, pull_request_review_comment.</p>
   <script>
     document.getElementById('manifest').value = ${JSON.stringify(manifestJson)};
