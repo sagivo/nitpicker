@@ -1,6 +1,9 @@
 node_modules/
 dist/
 .env
+.github-app.pem
+.github-app.json
+*.pem
 *.log
 .aws-sam/
 samconfig.toml

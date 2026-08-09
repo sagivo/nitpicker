@@ -113,7 +113,7 @@ export async function handlePullRequest(
 }
 
 /**
- * Handle the /ai-review command in PR comments to trigger an on-demand review.
+ * Handle the /nitpicker command in PR comments to trigger an on-demand review.
  */
 export async function handleOnDemandReview(
   context: Context<"issue_comment.created">,

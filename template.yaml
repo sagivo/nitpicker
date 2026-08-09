@@ -20,17 +20,21 @@ Parameters:
     Type: String
     NoEcho: true
     Description: GitHub webhook secret
-  AnthropicApiKey:
+  LlmApiKey:
     Type: String
     NoEcho: true
-    Description: Anthropic API key
+    Description: LLM provider API key
+  AiProvider:
+    Type: String
+    Default: anthropic
+    Description: AI provider (anthropic, openai, google)
   AiModel:
     Type: String
     Default: claude-sonnet-4-20250514
     Description: AI model to use for reviews
   BotName:
     Type: String
-    Default: pr-reviewer-bot
+    Default: nitpicker-bot
     Description: GitHub App bot name (without [bot] suffix)
   MaxDiffSize:
     Type: String
@@ -68,7 +72,8 @@ Resources:
           APP_ID: !Ref AppId
           PRIVATE_KEY_BASE64: !Ref PrivateKeyBase64
           WEBHOOK_SECRET: !Ref WebhookSecret
-          ANTHROPIC_API_KEY: !Ref AnthropicApiKey
+          LLM_API_KEY: !Ref LlmApiKey
+          AI_PROVIDER: !Ref AiProvider
           AI_MODEL: !Ref AiModel
           BOT_NAME: !Ref BotName
           MAX_DIFF_SIZE: !Ref MaxDiffSize

@@ -22,7 +22,8 @@ load_env() {
 
 APP_ID=$(load_env APP_ID)
 WEBHOOK_SECRET=$(load_env WEBHOOK_SECRET)
-ANTHROPIC_API_KEY=$(load_env ANTHROPIC_API_KEY)
+LLM_API_KEY=$(load_env LLM_API_KEY)
+AI_PROVIDER=$(load_env AI_PROVIDER)
 AI_MODEL=$(load_env AI_MODEL)
 BOT_NAME=$(load_env BOT_NAME)
 MAX_DIFF_SIZE=$(load_env MAX_DIFF_SIZE)
@@ -38,7 +39,7 @@ fi
 STACK_NAME="${STACK_NAME:-liblab-pr}"
 REGION="${AWS_REGION:-us-east-1}"
 
-for var in APP_ID WEBHOOK_SECRET ANTHROPIC_API_KEY PRIVATE_KEY_BASE64; do
+for var in APP_ID WEBHOOK_SECRET LLM_API_KEY PRIVATE_KEY_BASE64; do
   if [[ -z "${!var}" ]]; then
     echo "Error: $var is not set in .env"
     exit 1
@@ -61,9 +62,10 @@ sam deploy \
     "AppId=${APP_ID}" \
     "PrivateKeyBase64=${PRIVATE_KEY_BASE64}" \
     "WebhookSecret=${WEBHOOK_SECRET}" \
-    "AnthropicApiKey=${ANTHROPIC_API_KEY}" \
+    "LlmApiKey=${LLM_API_KEY}" \
+    "AiProvider=${AI_PROVIDER:-anthropic}" \
     "AiModel=${AI_MODEL:-claude-sonnet-4-20250514}" \
-    "BotName=${BOT_NAME:-pr-reviewer-bot}" \
+    "BotName=${BOT_NAME:-nitpicker-bot}" \
     "MaxDiffSize=${MAX_DIFF_SIZE:-50000}"
 
 echo ""

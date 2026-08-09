@@ -15,7 +15,7 @@ import { handleOnDemandReview } from "./pull-request.js";
  * Handle issue_comment.created events on pull requests.
  * Responds to:
  *   - @bot-name <question>  → answers the question using PR context
- *   - /ai-review            → triggers a full on-demand review
+ *   - /nitpicker            → triggers a full on-demand review
  */
 export async function handleIssueComment(
   context: Context<"issue_comment.created">,
@@ -33,7 +33,7 @@ export async function handleIssueComment(
   const body = payload.comment.body.trim();
   const pullNumber = payload.issue.number;
 
-  if (body.toLowerCase() === "/ai-review") {
+  if (body.toLowerCase() === "/nitpicker") {
     await handleOnDemandReview(context, pullNumber);
     return;
   }

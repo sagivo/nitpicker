@@ -1,5 +1,8 @@
 import { generateText } from "ai";
-import { anthropic } from "@ai-sdk/anthropic";
+import type { LanguageModel } from "ai";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
+import { createOpenAI } from "@ai-sdk/openai";
 import { z } from "zod";
 import { config } from "../config.js";
 import type { PRDetails, ThreadComment } from "./github.js";
@@ -11,8 +14,24 @@ import {
   buildThreadPrompt,
 } from "../prompts/question.js";
 
-function getModel() {
-  return anthropic(config.aiModel);
+type ModelFactory = (modelId: string) => LanguageModel;
+type ProviderFactory = (apiKey: string | undefined) => ModelFactory;
+
+const providerFactories: Record<string, ProviderFactory> = {
+  anthropic: (apiKey) => createAnthropic({ apiKey }),
+  google: (apiKey) => createGoogleGenerativeAI({ apiKey }),
+  openai: (apiKey) => createOpenAI({ apiKey }),
+};
+
+function getModel(): LanguageModel {
+  const createProvider = providerFactories[config.aiProvider];
+  if (!createProvider) {
+    throw new Error(
+      `Unsupported AI provider "${config.aiProvider}". ` +
+        `Supported providers: ${Object.keys(providerFactories).join(", ")}`,
+    );
+  }
+  return createProvider(config.llmApiKey)(config.aiModel);
 }
 
 const reviewCommentSchema = z.object({

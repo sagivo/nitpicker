@@ -1,5 +1,5 @@
 {
-  "name": "pr-reviewer",
+  "name": "nitpicker",
   "version": "1.0.0",
   "description": "AI-powered GitHub PR review bot using Vercel AI SDK and Probot",
   "private": true,
@@ -10,29 +10,25 @@
     "build": "tsc",
     "build:lambda": "node esbuild.config.mjs",
     "deploy": "./scripts/deploy.sh",
-    "typecheck": "tsc --noEmit",
-    "collect-stats": "tsx src/stats/collect.ts",
-    "dashboard": "tsx src/dashboard/server.ts"
+    "setup": "./scripts/install.sh",
+    "typecheck": "tsc --noEmit"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.45",
+    "@ai-sdk/google": "^3.0.104",
+    "@ai-sdk/openai": "^3.0.91",
     "@octokit/auth-app": "^8.2.0",
     "@octokit/rest": "^22.0.1",
     "ai": "^6.0.92",
-    "better-sqlite3": "^12.6.2",
     "dotenv": "^17.3.1",
     "probot": "^14.2.4",
     "zod": "^4.3.6"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": ["better-sqlite3"]
-  },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.160",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.3.0",
     "esbuild": "^0.27.3",
     "tsx": "^4.21.0",

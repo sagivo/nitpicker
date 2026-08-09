@@ -13,9 +13,9 @@ info:
     | Trigger | GitHub Event | Action |
     |---------|--------------|--------|
     | PR opened / updated / reopened | `pull_request` | Auto-reviews the PR with inline comments |
-    | `/ai-review` comment on a PR | `issue_comment` | Triggers an on-demand full review |
-    | `@pr-reviewer-bot <question>` on a PR | `issue_comment` | Answers the question using PR context |
-    | `@pr-reviewer-bot <question>` in a review thread | `pull_request_review_comment` | Replies in the thread with context-aware answers |
+    | `/nitpicker` comment on a PR | `issue_comment` | Triggers an on-demand full review |
+    | `@nitpicker-bot <question>` on a PR | `issue_comment` | Answers the question using PR context |
+    | `@nitpicker-bot <question>` in a review thread | `pull_request_review_comment` | Replies in the thread with context-aware answers |
 
     ## Authentication
 
@@ -56,7 +56,7 @@ paths:
         The bot processes the following event + action combinations:
 
         - **`pull_request`** with actions `opened`, `synchronize`, or `reopened` — triggers an automatic AI code review.
-        - **`issue_comment`** with action `created` — if the comment body is `/ai-review`, triggers an on-demand review.
+        - **`issue_comment`** with action `created` — if the comment body is `/nitpicker`, triggers an on-demand review.
           If the comment mentions `@<bot-name>`, answers the question using PR context.
         - **`pull_request_review_comment`** with action `created` — if the comment mentions `@<bot-name>`,
           replies in the review thread with a context-aware answer.
@@ -149,7 +149,7 @@ components:
         Delivered when a comment is created on a pull request issue.
 
         The bot responds to two patterns:
-        - `/ai-review` — triggers a full on-demand code review.
+        - `/nitpicker` — triggers a full on-demand code review.
         - `@<bot-name> <question>` — answers the question using PR context.
       required:
         - action
@@ -365,11 +365,11 @@ components:
           type: string
           description: |
             The comment text. The bot checks for:
-            - Exact match `/ai-review` to trigger on-demand review.
+            - Exact match `/nitpicker` to trigger on-demand review.
             - `@<bot-name> <question>` to answer a question.
           examples:
-            - "/ai-review"
-            - "@pr-reviewer-bot What does this change do?"
+            - "/nitpicker"
+            - "@nitpicker-bot What does this change do?"
         user:
           $ref: "#/components/schemas/User"
 
@@ -391,7 +391,7 @@ components:
           description: |
             The comment text. The bot responds when the body contains `@<bot-name>`.
           examples:
-            - "@pr-reviewer-bot Can you suggest a better approach here?"
+            - "@nitpicker-bot Can you suggest a better approach here?"
         path:
           type: string
           description: File path the comment is attached to.

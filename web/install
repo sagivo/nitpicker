@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Nitpicker one-liner installer.
+#   curl -fsSL https://nitpicker.dev/install | bash
+set -euo pipefail
+
+REPO_URL="${NITPICKER_REPO:-https://github.com/sagivo/nitpicker.git}"
+INSTALL_DIR="${NITPICKER_HOME:-$HOME/nitpicker}"
+BRANCH="${NITPICKER_BRANCH:-main}"
+
+BOLD=$'\033[1m'
+DIM=$'\033[2m'
+GREEN=$'\033[0;32m'
+CYAN=$'\033[0;36m'
+RED=$'\033[0;31m'
+RESET=$'\033[0m'
+
+info() { printf "%s→%s %s\n" "$CYAN" "$RESET" "$*"; }
+ok()   { printf "%s✓%s %s\n" "$GREEN" "$RESET" "$*"; }
+die()  { printf "%serror:%s %s\n" "$RED" "$RESET" "$*" >&2; exit 1; }
+have() { command -v "$1" >/dev/null 2>&1; }
+
+# curl|bash leaves stdin as the script pipe — talk to the real terminal
+if [[ -r /dev/tty && -w /dev/tty ]]; then
+  exec </dev/tty
+fi
+
+printf "\n%s nitpicker %s\n\n" "$BOLD" "$RESET"
+
+# ── prerequisites ───────────────────────────────────────────────────
+
+have git || die "git is required (https://git-scm.com)"
+have curl || die "curl is required"
+
+# ── clone / update ──────────────────────────────────────────────────
+
+if [[ -d "$INSTALL_DIR/.git" ]]; then
+  info "updating ${INSTALL_DIR}"
+  git -C "$INSTALL_DIR" fetch --quiet origin "$BRANCH" 2>/dev/null || true
+  if git -C "$INSTALL_DIR" rev-parse --verify "origin/${BRANCH}" >/dev/null 2>&1; then
+    git -C "$INSTALL_DIR" checkout --quiet "$BRANCH" 2>/dev/null || true
+    git -C "$INSTALL_DIR" pull --ff-only --quiet origin "$BRANCH" 2>/dev/null || true
+  fi
+  ok "repo ready"
+elif [[ -e "$INSTALL_DIR" ]]; then
+  die "${INSTALL_DIR} exists but is not a git repo — move it or set NITPICKER_HOME"
+else
+  info "cloning into ${INSTALL_DIR}"
+  git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$INSTALL_DIR" \
+    || git clone --depth 1 "$REPO_URL" "$INSTALL_DIR" \
+    || die "clone failed: $REPO_URL"
+  ok "cloned"
+fi
+
+cd "$INSTALL_DIR"
+
+if [[ ! -f scripts/install.sh ]]; then
+  die "scripts/install.sh missing — is this the nitpicker repo?"
+fi
+
+chmod +x scripts/install.sh scripts/deploy.sh 2>/dev/null || true
+chmod +x scripts/create-github-app.mjs scripts/update-webhook.mjs 2>/dev/null || true
+
+# ── hand off to the setup wizard ────────────────────────────────────
+
+info "starting setup wizard…"
+echo
+exec bash scripts/install.sh "$@"

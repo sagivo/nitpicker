@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nitpicker — the AI reviewer your ego didn’t ask for</title>
+  <meta name="description" content="Open-source AI that reviews GitHub PRs, roasts your variable names, and deploys on Lambda. LGTM is not in its vocabulary." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,600&display=swap" rel="stylesheet" />
+  <link rel="icon" href="assets/nit-avatar.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+
+  <header class="top">
+    <a class="brand" href="#">
+      <img src="assets/nit-avatar.png" width="28" height="28" alt="" />
+      <span>nitpicker</span>
+    </a>
+    <nav>
+      <a href="#install">Install</a>
+      <a class="primary" id="github-link" href="https://github.com/sagivo/nitpicker">Star on GitHub</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">
+          <span class="dot"></span>
+          open source · deploy in 30 seconds · free therapy (for your codebase)
+        </p>
+        <h1>LGTM is a cry for help.<br /><em>Nit answers.</em></h1>
+        <p class="lede">
+          AI that reviews GitHub PRs like the coworker who actually reads the diff —
+          then leaves comments you’ll think about in the shower.
+          Deploys on Lambda. Costs pennies. Costs pride.
+        </p>
+        <div class="actions">
+          <a class="btn" id="github-cta" href="https://github.com/sagivo/nitpicker">Star on GitHub</a>
+          <a class="btn ghost" href="#install">Install</a>
+        </div>
+      </div>
+      <figure class="hero-figure">
+        <img class="hero-nit" src="assets/nit-pointing.png" width="200" height="200" alt="Nit, the nitpicker mascot, pointing at a bad diff" />
+        <figcaption class="stamp">absolutely not</figcaption>
+      </figure>
+    </section>
+
+    <div class="feed" aria-label="Example reviews">
+      <article class="review featured">
+        <header class="review-head">
+          <p class="review-label"><span class="pr">pr #418</span> quick auth fix 🙏</p>
+          <span class="badge bad">denied</span>
+        </header>
+        <div class="diff">
+          <div class="diff-bar"><span class="file">src/handlers/auth.ts</span><span class="stat">+4 −1</span></div>
+          <pre><code><span class="meta">@@ -12,4 +12,7 @@</span>
+<span class="del">-  // TODO: validate session before trust</span>
+<span class="add">+  const data2 = await user.find(id)</span>
+<span class="add">+  if (data2) return data2</span>
+<span class="ctx">   return null</span>
+<span class="add">+  // ship it 🚀</span></code></pre>
+        </div>
+        <div class="comment">
+          <img class="face" src="assets/nit-clipboard.png" width="40" height="40" alt="" />
+          <div class="bubble">
+            <p class="who"><strong>nit</strong> <span>commented on auth.ts</span></p>
+            <p><code>data2</code> sounds like a spy who failed orientation.</p>
+            <p>You deleted the TODO that said “this is broken,” then added a rocket. That’s not a fix. That’s a vibe. Auth is not a vibe.</p>
+            <p class="verdict">request changes · also rename your shame</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="review">
+        <header class="review-head">
+          <p class="review-label"><span class="pr">pr #902</span> refactor isEven (why)</p>
+          <span class="badge warn">math called</span>
+        </header>
+        <div class="diff">
+          <div class="diff-bar"><span class="file">utils/helpers.ts</span><span class="stat">+4 −1</span></div>
+          <pre><code><span class="meta">@@ -1,3 +1,6 @@</span>
+<span class="del">- export const isEven = (n) => n % 2 === 0</span>
+<span class="add">+ export const isEven = (n) => {</span>
+<span class="add">+   // enterprise-grade parity engine</span>
+<span class="add">+   return [0,2,4,6,8].includes(Number(String(n).at(-1)))</span>
+<span class="add">+ }</span></code></pre>
+        </div>
+        <div class="comment">
+          <img class="face" src="assets/nit-shrug.png" width="40" height="40" alt="" />
+          <div class="bubble">
+            <p class="who"><strong>nit</strong> <span>commented on helpers.ts</span></p>
+            <p>Congratulations. You turned <code>%</code> into a LinkedIn post.</p>
+            <p><code>isEven(-2)</code> returns false. Pythagoras just sat down. Please put the modulo back and never speak of “parity engine” again.</p>
+            <p class="verdict">close PR · open a textbook</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="review">
+        <header class="review-head">
+          <p class="review-label"><span class="pr">pr #77</span> “improve error handling”</p>
+          <span class="badge bad">lol no</span>
+        </header>
+        <div class="diff">
+          <div class="diff-bar"><span class="file">CheckoutButton.tsx</span><span class="stat">+1 −1</span></div>
+          <pre><code><span class="meta">@@ onClick @@</span>
+<span class="del">- onClick={() => pay()}</span>
+<span class="add">+ onClick={() => { try { pay() } catch (e) { /* user will retry */ } }}</span></code></pre>
+        </div>
+        <div class="comment">
+          <img class="face" src="assets/nit-pointing.png" width="40" height="40" alt="" />
+          <div class="bubble">
+            <p class="who"><strong>nit</strong> <span>commented on CheckoutButton.tsx</span></p>
+            <p>You caught the error, wrote a fanfic about the user, and moved on. That’s not handling. That’s ghosting with extra steps.</p>
+            <p>The user will not retry. The user will open a support ticket titled “HELP” in all caps.</p>
+            <p class="verdict">request changes · log something · anything</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="review">
+        <header class="review-head">
+          <p class="review-label"><span class="pr">pr #1204</span> add loading state</p>
+          <span class="badge warn">suspicious</span>
+        </header>
+        <div class="diff">
+          <div class="diff-bar"><span class="file">Spinner.tsx</span><span class="stat">+3 −0</span></div>
+          <pre><code><span class="meta">@@ render @@</span>
+<span class="add">+ if (loading) return "Loading..."</span>
+<span class="add">+ if (loading) return "Still loading..."</span>
+<span class="add">+ if (loading) return "Almost..."</span></code></pre>
+        </div>
+        <div class="comment">
+          <img class="face" src="assets/nit-clipboard.png" width="40" height="40" alt="" />
+          <div class="bubble">
+            <p class="who"><strong>nit</strong> <span>commented on Spinner.tsx</span></p>
+            <p>Three early returns. Same condition. The third one is dead code that somehow feels optimistic.</p>
+            <p>This isn’t a loading state. It’s a choose-your-own-adventure where every path is “Loading...”</p>
+            <p class="verdict">one return. one div. go outside.</p>
+          </div>
+        </div>
+      </article>
+
+      <div class="split">
+        <article class="review compact">
+          <header class="review-head">
+            <p class="review-label"><span class="pr">auto</span> on open · ready · /nitpicker</p>
+          </header>
+          <div class="diff">
+            <div class="diff-bar"><span class="file">.github/workflows/reality.yml</span><span class="stat">events</span></div>
+            <pre><code><span class="meta">@@ team process @@</span>
+<span class="del">- ping Sarah who is in meetings until 2099</span>
+<span class="add">+ on: [opened, ready_for_review, /nitpicker]</span>
+<span class="add">+ nit: already mad about your imports</span></code></pre>
+          </div>
+          <div class="comment">
+            <img class="face" src="assets/nit-avatar.png" width="40" height="40" alt="" />
+            <div class="bubble">
+              <p class="who"><strong>nit</strong> <span>on process</span></p>
+              <p>Shows up before your standup does. Thread-aware. Will never book “quick sync (15 min → 47 min).”</p>
+            </div>
+          </div>
+        </article>
+
+        <article class="review compact">
+          <header class="review-head">
+            <p class="review-label"><span class="pr">infra</span> pnpm setup · then silence</p>
+          </header>
+          <div class="diff">
+            <div class="diff-bar"><span class="file">scripts/install.sh</span><span class="stat">deploy</span></div>
+            <pre><code><span class="meta">@@ runtime @@</span>
+<span class="add">+ pnpm setup  # app + .env + lambda + webhook</span>
+<span class="del">- EC2 instance named "temp" from 2019</span>
+<span class="add">+ Lambda · wakes up, ruins day, sleeps</span></code></pre>
+          </div>
+          <div class="comment">
+            <img class="face" src="assets/nit-wave.png" width="40" height="40" alt="" />
+            <div class="bubble">
+              <p class="who"><strong>nit</strong> <span>on deploy</span></p>
+              <p>One script. GitHub App. SAM. Webhook. Then it only bills you when someone ships something questionable. So… often.</p>
+            </div>
+          </div>
+        </article>
+      </div>
+    </div>
+
+    <section class="pitch" id="install">
+      <div class="pitch-copy">
+        <p class="eyebrow">install</p>
+        <h2>One command.<br /><em>Then open a PR.</em></h2>
+        <p class="pitch-lede">
+          Clones the repo, walks you through keys, creates the GitHub App,
+          deploys Lambda, wires the webhook. AWS account + LLM key — that’s the list.
+        </p>
+      </div>
+
+      <div class="install">
+        <div class="diff-bar">
+          <span class="file">terminal</span>
+          <button type="button" class="copy-btn" id="copy-install" data-copy="curl -fsSL https://nitpicker.dev/install | bash" aria-label="Copy install command">copy</button>
+        </div>
+        <pre id="install-cmd"><code>curl -fsSL https://nitpicker.dev/install | bash</code></pre>
+      </div>
+    </section>
+
+    <section class="meet" id="meet">
+      <img src="assets/nit.png" width="160" height="160" alt="Nit standing, unimpressed" />
+      <div>
+        <p class="eyebrow">mascot · do not feed after midnight</p>
+        <h2>Meet Nit. One eye. Many notes.</h2>
+        <p>
+          Born in a failing CI job. Raised on bad diffs.
+          Exists so humans can fight about product instead of
+          <code>console.log("here2")</code>.
+          Does not do pep talks. Does do line numbers.
+        </p>
+      </div>
+    </section>
+
+    <footer>
+      <img src="assets/nit-avatar.png" width="20" height="20" alt="" />
+      <span><strong>nitpicker</strong> — open-source AI PR reviews. Nit is fictional. The part of you that ships on Friday at 4:59 is not.</span>
+    </footer>
+  </main>
+
+  <script src="main.js"></script>
+</body>
+</html>
