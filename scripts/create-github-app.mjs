@@ -131,7 +131,7 @@ function donePage(ok, message) {
 
 async function exchangeCode(code) {
   const res = await fetch(
-    `https://api.github.com/app-manifests/${code}/conversions`,
+    `https://api.github.com/app-manifests/${encodeURIComponent(code)}/conversions`,
     {
       method: "POST",
       headers: {
@@ -139,6 +139,7 @@ async function exchangeCode(code) {
         "X-GitHub-Api-Version": "2022-11-28",
         "User-Agent": "nitpicker-install",
       },
+      signal: AbortSignal.timeout(30_000),
     },
   );
   if (!res.ok) {
@@ -146,6 +147,19 @@ async function exchangeCode(code) {
     throw new Error(`Manifest conversion failed (${res.status}): ${body}`);
   }
   return res.json();
+}
+
+function closeServer(server) {
+  return new Promise((resolve) => {
+    try {
+      // Drop keep-alive sockets so close() doesn't hang
+      server.closeAllConnections?.();
+      server.close(() => resolve());
+      setTimeout(resolve, 1000);
+    } catch {
+      resolve();
+    }
+  });
 }
 
 async function main() {
@@ -156,7 +170,20 @@ async function main() {
     ? `https://github.com/organizations/${encodeURIComponent(ORG)}/settings/apps/new`
     : "https://github.com/settings/apps/new";
 
+  let timer;
+  let settled = false;
+
   const app = await new Promise((resolve, reject) => {
+    const finish = (err, data) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      closeServer(server).finally(() => {
+        if (err) reject(err);
+        else resolve(data);
+      });
+    };
+
     const server = http.createServer(async (req, res) => {
       try {
         const url = new URL(req.url || "/", `http://127.0.0.1:${port}`);
@@ -190,17 +217,19 @@ async function main() {
               `App <strong>${data.slug || data.name}</strong> (id ${data.id}) is ready.`,
             ),
           );
-          server.close();
-          resolve(data);
+          finish(null, data);
           return;
         }
 
         res.writeHead(404).end("Not found");
       } catch (err) {
-        res.writeHead(500, { "Content-Type": "text/html; charset=utf-8" });
-        res.end(donePage(false, String(err?.message || err)));
-        server.close();
-        reject(err);
+        try {
+          res.writeHead(500, { "Content-Type": "text/html; charset=utf-8" });
+          res.end(donePage(false, String(err?.message || err)));
+        } catch {
+          /* response may already be started */
+        }
+        finish(err);
       }
     });
 
@@ -216,9 +245,8 @@ async function main() {
       openBrowser(setupUrl);
     });
 
-    setTimeout(() => {
-      server.close();
-      reject(new Error("Timed out waiting for GitHub App creation (5 minutes)"));
+    timer = setTimeout(() => {
+      finish(new Error("Timed out waiting for GitHub App creation (5 minutes)"));
     }, TIMEOUT_MS);
   });
 
