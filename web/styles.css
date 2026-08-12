@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark only;
   --paper: #1e1e1e;
   --paper-deep: #181818;
   --ink: #d4d4d4;
@@ -41,6 +42,7 @@
 }
 
 html {
+  color-scheme: dark only;
   scroll-behavior: smooth;
 }
 
@@ -57,7 +59,6 @@ body {
     radial-gradient(900px 420px at 100% 0%, rgba(86, 156, 214, 0.06), transparent 50%),
     linear-gradient(180deg, var(--paper) 0%, var(--paper-deep) 100%);
   background-attachment: fixed;
-  color-scheme: dark;
 }
 
 body::before {
